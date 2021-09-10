@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"strings"
 	"time"
 
@@ -16,8 +15,6 @@ import (
 
 // init parses flags, sets constants, and prepares us for battle
 func init() {
-	fmt.Printf("LOD v%s", util.Version)
-
 	// set boot time immediately
 	util.BootTime = time.Now()
 
