@@ -64,7 +64,7 @@ func wireHandlers(r *fiber.App) {
 	// r.Get("/capabilities", TODO)
 
 	// JSON service health / status handler
-	r.Get("/lio", handlers.StatusHandler)
+	r.Get("/status", handlers.StatusHandler)
 
 	// Custom 404 page
 	middleware.NotFound(r)
