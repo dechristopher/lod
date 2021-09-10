@@ -17,6 +17,6 @@ func StatusHandler(c *fiber.Ctx) error {
 	return c.JSON(status{
 		Version:  util.Version,
 		Uptime:   util.TimeSinceBoot().Seconds(),
-		BootTime: util.BootTime.UnixNano(),
+		BootTime: util.BootTime.UnixMilli(),
 	})
 }
