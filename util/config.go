@@ -32,7 +32,11 @@ func IsDebugFlag(flag string) bool {
 
 // GetPort returns the configured primary HTTP port
 func GetPort() string {
-	return os.Getenv("PORT")
+	port, ok := os.LookupEnv("PORT")
+	if !ok {
+		return "1337"
+	}
+	return port
 }
 
 // GetListenPort returns the colon-formatted listen port
