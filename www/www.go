@@ -22,7 +22,6 @@ func Serve() {
 	r := fiber.New(fiber.Config{
 		ServerHeader:          "LODv" + util.Version,
 		CaseSensitive:         true,
-		ErrorHandler:          nil,
 		DisableStartupMessage: true,
 	})
 
