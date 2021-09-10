@@ -60,8 +60,8 @@ func wireHandlers(r *fiber.App) {
 	// wire up all middleware components
 	middleware.Wire(r)
 
-	// root handler to show configured endpoints
-	// r.Get("/", TODO)
+	// capabilities endpoint shows configuration summary
+	// r.Get("/capabilities", TODO)
 
 	// JSON service health / status handler
 	r.Get("/lio", handlers.StatusHandler)

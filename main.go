@@ -35,5 +35,6 @@ func main() {
 	// load .env if any
 	_ = godotenv.Load()
 
+	// serve LOD endpoints
 	www.Serve()
 }
