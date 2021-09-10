@@ -12,11 +12,10 @@ var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 // GenerateCode generates an n character seeded randomized code
 func GenerateCode(length int) string {
 	b := make([]byte, length)
-	for {
-		for i := range b {
-			b[i] = charset[seededRand.Intn(len(charset))]
-		}
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
 	}
+	return string(b)
 }
 
 // MilliTime returns the current millisecond time
