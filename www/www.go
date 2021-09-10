@@ -39,7 +39,7 @@ func Serve() {
 	}()
 
 	util.Info(str.CMain, str.MStarted, util.TimeSinceBoot(),
-		env.GetEnv(), util.GetPort(), "none")
+		env.GetEnv(), util.GetPort())
 
 	// listen for connections on primary listening port
 	if err := r.Listen(util.GetListenPort()); err != nil {

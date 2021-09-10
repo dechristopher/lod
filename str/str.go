@@ -34,7 +34,7 @@ const ()
 const (
 	MDevMode  = "!! DEVELOPER MODE !!"
 	MInit     = "starting %s"
-	MStarted  = "started in %s [env: %s][http: %s][health: %s]"
+	MStarted  = "started in %s [env: %s][http: %s]"
 	MShutdown = "shutting down"
 	MExit     = "exit"
 )
