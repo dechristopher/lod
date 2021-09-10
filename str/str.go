@@ -15,7 +15,7 @@ const (
 
 // (C) Log caller names
 const (
-	CMain = "LIO"
+	CMain = "LOD"
 	CLog  = "Log"
 	CTool = "Tool"
 )
