@@ -25,10 +25,11 @@ const (
 
 // (E) Error messages
 const (
-	ELogFail = "failed to log error=%s msg=%+v"
-	EConfig  = "failed to read config file error=%s"
-	ERead    = "read err: %s"
-	EWrite   = "write err: meta=%+v error=%s"
+	ELogFail        = "failed to log error=%s msg=%+v"
+	EConfig         = "failed to read config file error=%s"
+	EConfigNotFound = "config file not found at path: '%s'"
+	ERead           = "read err: %s"
+	EWrite          = "write err: meta=%+v error=%s"
 )
 
 // (U) User-facing error messages and codes
