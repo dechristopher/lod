@@ -8,6 +8,9 @@ const (
 	FDebugFlags      = "debug"
 	FDebugFlagsUsage = "Comma separated debug flags [foo,bar,baz]"
 
+	FConfigFile      = "c"
+	FConfigFileUsage = "Path to TOML configuration file"
+
 	InfoFormat  = "INFO  [%s] %s\n"
 	DebugFormat = "DEBUG [%s] %s\n"
 	ErrorFormat = "ERROR [%s] %s\n"
@@ -23,6 +26,7 @@ const (
 // (E) Error messages
 const (
 	ELogFail = "failed to log error=%s msg=%+v"
+	EConfig  = "failed to read config file error=%s"
 	ERead    = "read err: %s"
 	EWrite   = "write err: meta=%+v error=%s"
 )
