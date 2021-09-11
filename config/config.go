@@ -1,12 +1,20 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
+	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/tile-fund/lod/str"
+	"github.com/tile-fund/lod/util"
 )
 
 var (
+	// Version of LOD
+	Version = "0.0.1"
+
 	Cap  Capabilities
 	File *string
 )
@@ -20,8 +28,8 @@ type Capabilities struct {
 
 // Instance configuration for LOD
 type Instance struct {
-	Port        int    `json:"port"`        // configured LOD port
-	Environment string `json:"environment"` // configured LOD environment
+	Port        int    `json:"port" toml:"port"` // configured LOD port
+	Environment string `json:"environment"`      // configured LOD environment
 }
 
 // Proxy represents a configuration for a single endpoint proxy instance
@@ -51,4 +59,36 @@ func Read() error {
 
 	_, err = toml.Decode(string(configData), &Cap)
 	return err
+}
+
+// GetPort returns the configured primary HTTP port
+func GetPort() int {
+	portEnv, ok := os.LookupEnv("PORT")
+	if !ok {
+		if Cap.Instance.Port != 0 {
+			return Cap.Instance.Port
+		}
+		return 1337
+	}
+	port, err := strconv.Atoi(portEnv)
+	if err != nil {
+		util.Error(str.CConf, str.EConfigPort, portEnv, err.Error())
+	}
+	return port
+}
+
+// GetListenPort returns the colon-formatted listen port
+func GetListenPort() string {
+	return fmt.Sprintf(":%d", GetPort())
+}
+
+// CorsOrigins returns the proper CORS origin configuration
+//  or "*" if none configured
+func CorsOrigins() string {
+	origins, ok := os.LookupEnv("CORS")
+	if !ok {
+		return "*"
+	}
+
+	return origins
 }
