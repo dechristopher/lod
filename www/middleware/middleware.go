@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+	"github.com/tile-fund/lod/config"
 
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/util"
@@ -31,7 +32,7 @@ func Wire(r fiber.Router) {
 
 	// Configure CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: util.CorsOrigins(),
+		AllowOrigins: config.CorsOrigins(),
 		AllowHeaders: "Origin, Content-Type, Accept",
 	}))
 

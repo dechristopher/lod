@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 
 	"github.com/tile-fund/lod/util"
@@ -17,7 +18,7 @@ type status struct {
 // StatusHandler returns a JSON object with status info
 func StatusHandler(c *fiber.Ctx) error {
 	return c.JSON(status{
-		Version:     util.Version,
+		Version:     config.Version,
 		Environment: env.GetEnv(),
 		Uptime:      util.TimeSinceBoot().Seconds(),
 		BootTime:    util.BootTime.UnixMilli(),

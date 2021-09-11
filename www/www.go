@@ -7,6 +7,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/tile-fund/lod/config"
 
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
@@ -17,10 +18,8 @@ import (
 
 // Serve all public endpoints
 func Serve() {
-	util.Info(str.CMain, str.MInit, util.Version)
-
 	r := fiber.New(fiber.Config{
-		ServerHeader:          "LODv" + util.Version,
+		ServerHeader:          "LODv" + config.Version,
 		CaseSensitive:         true,
 		DisableStartupMessage: true,
 	})
@@ -39,10 +38,10 @@ func Serve() {
 	}()
 
 	util.Info(str.CMain, str.MStarted, util.TimeSinceBoot(),
-		env.GetEnv(), util.GetPort())
+		env.GetEnv(), config.GetPort())
 
 	// listen for connections on primary listening port
-	if err := r.Listen(util.GetListenPort()); err != nil {
+	if err := r.Listen(config.GetListenPort()); err != nil {
 		log.Println(err)
 	}
 
