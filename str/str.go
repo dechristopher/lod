@@ -5,11 +5,17 @@ var CPadding = 0
 
 // Flags, log formats and miscellaneous strings
 const (
-	FDebugFlags      = "debug"
-	FDebugFlagsUsage = "Comma separated debug flags [foo,bar,baz]"
+	FConfigFile      = "conf"
+	FConfigFileUsage = "Path to TOML configuration file. Default: config.toml"
 
-	FConfigFile      = "c"
-	FConfigFileUsage = "Path to TOML configuration file"
+	FDevMode      = "dev"
+	FDevModeUsage = "Whether to enable developer mode. Default: false"
+
+	FDebugFlags      = "debug"
+	FDebugFlagsUsage = "Optional comma separated debug flags. Ex: foo,bar,baz"
+
+	FHelp      = "help"
+	FHelpUsage = "Shows this help menu."
 
 	InfoFormat  = "INFO  [%s] %s\n"
 	DebugFormat = "DEBUG [%s] %s\n"
@@ -20,7 +26,7 @@ const (
 const (
 	CMain = "LOD"
 	CLog  = "Log"
-	CTool = "Tool"
+	CConf = "Conf"
 )
 
 // (E) Error messages
@@ -28,6 +34,7 @@ const (
 	ELogFail        = "failed to log error=%s msg=%+v"
 	EConfig         = "failed to read config file error=%s"
 	EConfigNotFound = "config file not found at path: '%s'"
+	EConfigPort     = "port override in env is invalid env=%s err=%s"
 	ERead           = "read err: %s"
 	EWrite          = "write err: meta=%+v error=%s"
 )
@@ -38,8 +45,8 @@ const ()
 // (M) Standard info log messages
 const (
 	MDevMode  = "!! DEVELOPER MODE !!"
-	MInit     = "starting %s"
-	MStarted  = "started in %s [env: %s][http: %s]"
+	MInit     = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
+	MStarted  = "started in %s [env: %s][http: %d]"
 	MShutdown = "shutting down"
 	MExit     = "exit"
 )
@@ -49,3 +56,14 @@ const ()
 
 // (T) Test messages
 const ()
+
+// Help message
+const Help = `
+Flags:
+  --conf  Path to TOML configuration file. Default: config.toml
+  --dev   Whether to enable developer mode. Default: false
+  --debug Optional comma separated debug flags. Ex: foo,bar,baz
+  --help  Shows this help menu.
+Usage:
+  lod [--conf config.toml] [--dev]
+`
