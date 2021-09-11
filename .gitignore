@@ -18,3 +18,7 @@
 .idea/
 .idea/*
 .idea/**
+
+# LOD config files
+*.toml
+**/*.toml
