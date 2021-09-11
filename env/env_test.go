@@ -6,7 +6,7 @@ import (
 )
 
 func TestGetEnv(t *testing.T) {
-	err := os.Setenv("DEPLOY", "prod")
+	err := os.Setenv("DEPLOY", "PROD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -17,7 +17,7 @@ func TestGetEnv(t *testing.T) {
 }
 
 func TestIsProd(t *testing.T) {
-	err := os.Setenv("DEPLOY", "prod")
+	err := os.Setenv("DEPLOY", "PROD")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestIsProd(t *testing.T) {
 }
 
 func TestIsDev(t *testing.T) {
-	err := os.Setenv("DEPLOY", "dev")
+	err := os.Setenv("DEPLOY", "DEV")
 	if err != nil {
 		t.Fatal(err)
 	}
