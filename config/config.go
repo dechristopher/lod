@@ -15,7 +15,10 @@ var (
 	// Version of LOD
 	Version = "0.0.1"
 
-	Cap  Capabilities
+	// Cap is a store for local instance Capabilities
+	Cap Capabilities
+
+	// File is a reference to the config file path to read from
 	File *string
 )
 
