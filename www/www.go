@@ -60,7 +60,7 @@ func wireHandlers(r *fiber.App) {
 	middleware.Wire(r)
 
 	// capabilities endpoint shows configuration summary
-	// r.Get("/capabilities", TODO)
+	r.Get("/capabilities", handlers.Capabilities)
 
 	// JSON service health / status handler
 	r.Get("/status", handlers.Status)
