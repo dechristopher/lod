@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/BurntSushi/toml"
+	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
 )
@@ -38,7 +39,7 @@ type Instance struct {
 // Proxy represents a configuration for a single endpoint proxy instance
 type Proxy struct {
 	Name        string `json:"name" toml:"name"`                 // display name for this proxy
-	URL         string `json:"proxy_url" toml:"proxy_url"`       // templated tileserver URL that this instance will hit
+	TileURL     string `json:"tile_url" toml:"tile_url"`         // templated tileserver URL that this instance will hit
 	CorsOrigins string `json:"cors_origins" toml:"cors_origins"` // allowed CORS origins, comma separated
 	AccessToken string `json:"-" toml:"access_token"`            // optional access token for incoming requests
 	Cache       Cache  `json:"cache" toml:"cache"`               // cache configuration for this proxy instance
@@ -61,6 +62,9 @@ func Read() error {
 	}
 
 	_, err = toml.Decode(string(configData), &Cap)
+
+	Cap.Version = Version
+	Cap.Instance.Environment = string(env.GetEnv())
 	return err
 }
 
