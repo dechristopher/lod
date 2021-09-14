@@ -15,8 +15,8 @@ type status struct {
 	BootTime    int64   `json:"boot"`   // time started, unix timestamp
 }
 
-// StatusHandler returns a JSON object with status info
-func StatusHandler(c *fiber.Ctx) error {
+// Status returns a JSON object with status info
+func Status(c *fiber.Ctx) error {
 	return c.JSON(status{
 		Version:     config.Version,
 		Environment: env.GetEnv(),
