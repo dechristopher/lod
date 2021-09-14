@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -22,6 +23,10 @@ func Serve() {
 		ServerHeader:          "LODv" + config.Version,
 		CaseSensitive:         true,
 		DisableStartupMessage: true,
+		ProxyHeader:           "X-Forwarded-For",
+		ReadTimeout:           time.Second * 10,
+		WriteTimeout:          time.Second * 30,
+		IdleTimeout:           time.Hour,
 	})
 
 	// wire up all route handlers
