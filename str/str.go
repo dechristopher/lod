@@ -17,16 +17,18 @@ const (
 	FHelp      = "help"
 	FHelpUsage = "Shows this help menu."
 
-	InfoFormat  = "INFO  [%s] %s\n"
-	DebugFormat = "DEBUG [%s] %s\n"
-	ErrorFormat = "ERROR [%s] %s\n"
+	InfoFormat  = "INF [%s] %s\n"
+	DebugFormat = "DBG [%s] %s\n"
+	ErrorFormat = "ERR [%s] %s\n"
 )
 
 // (C) Log caller names
 const (
-	CMain = "LOD"
-	CLog  = "Log"
-	CConf = "Conf"
+	CMain  = "LOD"
+	CLog   = "Log"
+	CConf  = "Config"
+	CProxy = "Proxy"
+	CCache = "Cache"
 )
 
 // (E) Error messages
@@ -35,8 +37,11 @@ const (
 	EConfig         = "failed to read config file error=%s"
 	EConfigNotFound = "config file not found at path: '%s'"
 	EConfigPort     = "port override in env is invalid env=%s err=%s"
+	EWire           = "failed to wire up instance handlers error=%s"
+	EBadRequest     = "failed to fetch URL parameters error=%s"
+	ECacheName      = "failed to create cache, no proxy configured for name=%s"
 	ERead           = "read err: %s"
-	EWrite          = "write err: meta=%+v error=%s"
+	EWrite          = "write err: error=%s meta=%+v"
 )
 
 // (U) User-facing error messages and codes
@@ -47,12 +52,18 @@ const (
 	MDevMode  = "!! DEVELOPER MODE !!"
 	MInit     = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
 	MStarted  = "started in %s [env: %s][http: %d]"
+	MProxy    = "configured proxy [%s] -> %s"
 	MShutdown = "shutting down"
 	MExit     = "exit"
 )
 
 // (D) Debug log messages
-const ()
+const (
+	DCacheSet  = "cache set key=%s len=%d"
+	DCacheMiss = "cache miss key=%s"
+	DCacheFail = "cache bad value key=%s"
+	DCacheHit  = "cache hit key=%s len=%d"
+)
 
 // (T) Test messages
 const ()
