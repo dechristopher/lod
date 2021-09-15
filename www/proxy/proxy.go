@@ -98,7 +98,6 @@ func handler(p config.Proxy) fiber.Handler {
 				return err
 			}
 
-			// spin off a routine to cache the tile without blocking the response
 			if len(c.Response().Body()) > 0 {
 				// copy tile data into separate slice, so we don't lose the reference
 				tile := cache.Tile{
@@ -110,6 +109,12 @@ func handler(p config.Proxy) fiber.Handler {
 				// Store configured headers into the tile cache for this tile
 				p.PopulateHeaders(c, tile.Headers)
 
+				// Delete headers from the final response that are on the DelHeaders list
+				// if we got them from the tileserver. This can be used to prevent leaking
+				// internals of the tileserver if you don't control what it returns
+				p.DeleteHeaders(c)
+
+				// spin off a routine to cache the tile without blocking the response
 				go cache.Caches.Get(p.Name).Set(cacheKey, tile)
 			}
 		}
