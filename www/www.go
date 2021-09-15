@@ -8,8 +8,9 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/tile-fund/lod/config"
+	"github.com/tile-fund/lod/www/proxy"
 
+	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
@@ -30,7 +31,10 @@ func Serve() {
 	})
 
 	// wire up all route handlers
-	wireHandlers(r)
+	err := wireHandlers(r)
+	if err != nil {
+		util.Error(str.CMain, str.EWire, err.Error())
+	}
 
 	// Graceful shutdown with SIGINT
 	// SIGTERM and others will hard kill
@@ -57,19 +61,32 @@ func Serve() {
 
 // wireHandlers builds all the websocket and http routes
 // into the fiber app context
-func wireHandlers(r *fiber.App) {
+func wireHandlers(r *fiber.App) error {
 	// recover from panics
 	r.Use(recover.New())
 
+	lodGroup := r.Group("/lod")
+
 	// wire up all middleware components
-	middleware.Wire(r)
+	middleware.Wire(lodGroup)
 
 	// capabilities endpoint shows configuration summary
-	r.Get("/capabilities", handlers.Capabilities)
+	lodGroup.Get("/capabilities", handlers.Capabilities)
 
 	// JSON service health / status handler
-	r.Get("/status", handlers.Status)
+	lodGroup.Get("/status", handlers.Status)
+
+	// configure proxy endpoints for each configured proxy
+	for _, p := range config.Cap.Proxies {
+		err := proxy.WireProxy(r, p)
+		if err != nil {
+			return err
+		}
+		util.Info(str.CMain, str.MProxy, p.Name, p.TileURL)
+	}
 
 	// Custom 404 page
 	middleware.NotFound(r)
+
+	return nil
 }
