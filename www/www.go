@@ -21,7 +21,6 @@ import (
 // Serve all public endpoints
 func Serve() {
 	r := fiber.New(fiber.Config{
-		ServerHeader:          "LODv" + config.Version,
 		CaseSensitive:         true,
 		DisableStartupMessage: true,
 		ProxyHeader:           "X-Forwarded-For",
