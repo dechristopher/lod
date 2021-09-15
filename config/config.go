@@ -150,6 +150,16 @@ func (p *Proxy) PopulateHeaders(c *fiber.Ctx, headers map[string]string) {
 	}
 }
 
+// DeleteHeaders will strip headers from the response that are part of the
+// DelHeaders list of headers to delete from the final response
+func (p *Proxy) DeleteHeaders(c *fiber.Ctx) {
+	for _, delHeader := range p.DelHeaders {
+		if len(c.Response().Header.Peek(delHeader)) > 0 {
+			c.Response().Header.Del(delHeader)
+		}
+	}
+}
+
 // validateProxy will validate an individual proxy endpoint in the configuration
 func validateProxy(num int, proxy Proxy) error {
 	if proxy.Name == "" {
