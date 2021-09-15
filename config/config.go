@@ -55,7 +55,7 @@ type Proxy struct {
 type Cache struct {
 	MemCap   int `json:"mem_cap" toml:"mem_cap"`     // maximum number of tiles to store in the in-memory LRU cache
 	MemPrune int `json:"mem_prune" toml:"mem_prune"` // number tiles to prune when we hit the MemCap
-	MemTTL   int `json:"mem_ttl" toml:"mem_ttl"`     // in-memory cache TTL
+	MemTTL   int `json:"mem_ttl" toml:"mem_ttl"`     // in-memory cache TTL in seconds
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
 	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or -1 for no TTL)

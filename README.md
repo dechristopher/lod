@@ -48,24 +48,33 @@ library by [karlseguin](https://github.com/karlseguin).
 
 ## Sample Config
 ```toml
-# Sample LOD config file
-
 [instance]
-port = 1337
+port = 1337 # port to bind to
 
 [[proxies]]
+# name of this proxy, available at http://lod/{name}/{z}/{y}/{x}.pbf
 name = "osm"
-tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf"
+# url of the upstream tileserver
+tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf" 
+# comma-separated list of allowed CORS origins
 cors_origins = "https://example.com"
-access_token = "MyTilesArePrivate"
-add_headers = [ "X-We-Want-This", "X-This-One-Too" ]
+# auth bearer token to require for requests to upstream tileserver
+access_token = "MyTilesArePrivate" 
+# headers to pull and cache from the tileserver response
+add_headers = [ "X-We-Want-This", "X-This-One-Too" ] 
+# headers to delete from the tileserver response
 del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
-mem_cap = 5000
-mem_prune = 100
-mem_ttl = 3600
-redis_ttl = 86400
+mem_cap = 5000    # max capacity of in-memory cache
+mem_prune = 100   # number of tiles to prune when the cap is reached
+mem_ttl = 3600    # in-memory cache TTL in seconds
+redis_ttl = 86400 # redis tile cache TTL in seconds (or -1 for no TTL)
+
+# Supports many configured proxy instances for caching multiple tileservers
+[[proxies]]
+name = "another"
+# etc.
 ```
 
 ## License
