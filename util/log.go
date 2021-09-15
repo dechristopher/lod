@@ -33,7 +33,7 @@ func Debug(caller, message string, args ...interface{}) {
 // DebugFlag prints a debug message to the standard logger if flag is enabled
 func DebugFlag(flag, caller, message string, args ...interface{}) {
 	if IsDebugFlag(flag) {
-		printLog("debug", str.DebugFormat, caller, message, args...)
+		Debug(caller, message, args...)
 	}
 }
 
