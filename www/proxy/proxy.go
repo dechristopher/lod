@@ -101,13 +101,11 @@ func handler(p config.Proxy) fiber.Handler {
 			// spin off a routine to cache the tile without blocking the response
 			if len(c.Response().Body()) > 0 {
 				// copy tile data into separate slice, so we don't lose the reference
-				tileData := make([]byte, len(c.Response().Body()))
-				copy(tileData, c.Response().Body())
-
 				tile := cache.Tile{
-					Data:    tileData,
+					Data:    make([]byte, len(c.Response().Body())),
 					Headers: map[string]string{},
 				}
+				copy(tile.Data, c.Response().Body())
 
 				// Store configured headers into the tile cache for this tile
 				p.PopulateHeaders(c, tile.Headers)
