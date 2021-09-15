@@ -85,6 +85,6 @@ func (c *Cache) Fetch(key string) *Tile {
 // Set the tile in all cache levels with the configured TTLs
 func (c *Cache) Set(key string, tile Tile) {
 	c.internal.Set(key, tile, time.Duration(c.proxy.Cache.MemTTL)*time.Second)
+	// go redis.Set(key, tile, etc)
 	go util.Debug(str.CCache, str.DCacheSet, key, len(tile.Data))
-	// redis.Set(key, tile, etc)
 }
