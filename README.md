@@ -3,9 +3,11 @@
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://raw.githubusercontent.com/tile-fund/lod/master/LICENSE)
 
 LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a 
-slim authentication backend. It can pull from any tile server and will 
+slim authentication backend. It will sit in front of any tile server and will 
 aggressively cache tiles in memory, optionally storing them in a configured
-Redis cluster for faster fetching later.
+Redis cluster for faster fetching later. LOD is cluster-aware and uses Redis
+message queueing for intra-cluster communication when multiple instances are
+deployed together.
 
 LOD is written in Go 1.17 using [fiber](https://github.com/gofiber/fiber). TOML
 is used for configuration. Go templates are used for templating. Internal 
