@@ -25,7 +25,9 @@ func Info(caller, message string, args ...interface{}) {
 
 // Debug prints a debug message to the standard logger
 func Debug(caller, message string, args ...interface{}) {
-	printLog("debug", str.DebugFormat, caller, message, args...)
+	if env.IsDev() {
+		printLog("debug", str.DebugFormat, caller, message, args...)
+	}
 }
 
 // DebugFlag prints a debug message to the standard logger if flag is enabled
