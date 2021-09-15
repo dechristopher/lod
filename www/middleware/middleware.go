@@ -15,30 +15,33 @@ import (
 )
 
 const logFormatProd = "${ip} ${header:x-forwarded-for} ${header:x-real-ip} " +
-	"[${time}] ${pid} ${locals:requestid} \"${method} ${path} ${protocol}\" " +
-	"${status} ${latency} \"${referrer}\" \"${ua}\"\n"
+	"[${time}] ${pid} ${locals:requestid}${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
+	"${status} ${latency} ${bytesSent}b \"${referrer}\" \"${ua}\"\n"
 
-const logFormatDev = "${ip} [${time}] \"${method} ${path} ${protocol}\" " +
-	"${status} ${latency}\n"
+const logFormatDev = "${ip} [${time}]${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
+	"${status} ${latency} ${bytesSent}b\n"
 
 // Wire attaches all middleware to the given router
-func Wire(r fiber.Router) {
+func Wire(r fiber.Router, proxy ...config.Proxy) {
 	r.Use(requestid.New())
 
-	// Compress responses
-	r.Use(compress.New(compress.Config{
-		Level: compress.LevelBestSpeed,
-	}))
+	// Compress responses for non-tiles, use tileserver compression and encoding
+	if len(proxy) == 0 {
+		r.Use(compress.New(compress.Config{
+			Level: compress.LevelBestSpeed,
+		}))
+	}
 
-	// Configure CORS
-	r.Use(cors.New(cors.Config{
-		AllowOrigins: config.CorsOrigins(),
-		AllowHeaders: "Origin, Content-Type, Accept",
-	}))
+	// Configure CORS for non-tiles
+	if len(proxy) == 0 {
+		r.Use(cors.New(cors.Config{
+			AllowOrigins: "*",
+			AllowHeaders: "Origin, Content-Type, Accept",
+		}))
+	}
 
 	// STDOUT request logger
 	r.Use(logger.New(logger.Config{
-		// For more options, see the Config section
 		TimeZone:   "local",
 		TimeFormat: "2006-01-02T15:04:05-0700",
 		Format:     logFormat(),
