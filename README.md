@@ -21,7 +21,7 @@ Go templates are used for templating. Internal caching logic is built upon the
 - Internal stats tracking for top-N tiles requested
 - Supports multiple configured tileserver proxies
   - Separate authentication (bearer tokens and CORS)
-  - Separate stats tracking and caches
+  - Separate stats tracking and internal caches
 
 ## License
 
