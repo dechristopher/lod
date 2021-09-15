@@ -45,7 +45,8 @@ type Proxy struct {
 	Name        string   `json:"name" toml:"name"`                 // display name for this proxy
 	TileURL     string   `json:"tile_url" toml:"tile_url"`         // templated tileserver URL that this instance will hit
 	CorsOrigins string   `json:"cors_origins" toml:"cors_origins"` // allowed CORS origins, comma separated
-	Headers     []string `json:"headers" toml:"headers"`           // additional headers to pull through from the tileserver
+	AddHeaders  []string `json:"add_headers" toml:"add_headers"`   // additional headers to pull through from the tileserver
+	DelHeaders  []string `json:"del_headers" toml:"del_headers"`   // headers to exclude from the tileserver response
 	AccessToken string   `json:"-" toml:"access_token"`            // optional access token for incoming requests
 	Cache       Cache    `json:"cache" toml:"cache"`               // cache configuration for this proxy instance
 }
@@ -70,6 +71,7 @@ var defaultCache = Cache{
 var zeroCache = Cache{
 	MemCap:   0,
 	MemPrune: 0,
+	MemTTL:   0,
 	RedisTTL: 0,
 }
 
@@ -85,14 +87,18 @@ func Read() error {
 	}
 
 	// set default cache parameters if not provided
-	for _, proxy := range Cap.Proxies {
-		if proxy.Cache == zeroCache {
-			proxy.Cache = defaultCache
+	for i := range Cap.Proxies {
+		if Cap.Proxies[i].Cache == zeroCache {
+			Cap.Proxies[i].Cache = defaultCache
+		}
+
+		if Cap.Proxies[i].AddHeaders == nil {
+			Cap.Proxies[i].AddHeaders = make([]string, 0)
 		}
 
 		// Register default content headers
-		proxy.registerHeader("Content-Type")
-		proxy.registerHeader("Content-Encoding")
+		Cap.Proxies[i].registerHeader("Content-Type")
+		Cap.Proxies[i].registerHeader("Content-Encoding")
 	}
 
 	// inject instance info to config for viewing in /capabilities
@@ -121,9 +127,9 @@ func validate(c Capabilities) error {
 
 // registerHeader will add a header to the list of headers to pull through from
 // the underlying configured tileserver
-func (p Proxy) registerHeader(header string) {
+func (p *Proxy) registerHeader(header string) {
 	found := false
-	for _, key := range p.Headers {
+	for _, key := range p.AddHeaders {
 		if key == header {
 			found = true
 			break
@@ -131,13 +137,13 @@ func (p Proxy) registerHeader(header string) {
 	}
 
 	if !found {
-		p.Headers = append(p.Headers, header)
+		p.AddHeaders = append(p.AddHeaders, header)
 	}
 }
 
 // PopulateHeaders will fill the given header map with configured headers
-func (p Proxy) PopulateHeaders(c *fiber.Ctx, headers map[string]string) {
-	for _, header := range p.Headers {
+func (p *Proxy) PopulateHeaders(c *fiber.Ctx, headers map[string]string) {
+	for _, header := range p.AddHeaders {
 		if len(c.Response().Header.Peek(header)) > 0 {
 			headers[header] = string(c.Response().Header.Peek(header))
 		}
