@@ -26,25 +26,26 @@ library by [karlseguin](https://github.com/karlseguin).
 - Supports [XYZ (Slippy)](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
   and [TMS](https://wiki.openstreetmap.org/wiki/TMS) tile indexing schemes
 
-## Features
+## v1.0.0 Feature Roadmap
 
-- Multi-level caching
-    - In-memory, tunable LRU cache as first level
-    - Redis cluster with configurable TTL as second level
-- Configurable header proxying and deletion
-  - `Content-Type` and `Content-Encoding` are added by default
-- Internal stats tracking for top-N tiles requested
-- Supports multiple configured tileserver proxies
-  - Separate authentication (bearer tokens and CORS)
-  - Separate stats tracking and internal caches
-- Administrative endpoints
-  - Reload the instance configuration
-  - Wipe the instance caches
-  - Cluster-wide operations
-    - Wipe the entire cache for a proxy on all instances
-    - Wipe a given tile and re-prime it across the cluster
-    - Iteratively wipe all tiles under a given tile (all zoom levels)
-    - Iteratively prime all tiles under a given tile
+- [ ] Multi-level caching
+    - [X] In-memory, tunable LRU cache as first level
+    - [ ] Redis cluster with configurable TTL as second level
+- [X] Configurable header proxying and deletion
+  - [X] `Content-Type` and `Content-Encoding` are added by default
+- [ ] Internal stats tracking for top-N tiles requested
+- [ ] Supports multiple configured tileserver proxies
+  - [X] Separate authentication (bearer tokens and CORS)
+  - [X] Separate internal caches
+  - [ ] Separate stats tracking
+- [ ] Administrative endpoints
+  - [ ] Reload the instance configuration
+  - [ ] Wipe the instance caches
+  - [ ] Cluster-wide operations
+    - [ ] Wipe the entire cache for a proxy on all instances
+    - [ ] Wipe a given tile and re-prime it across the cluster
+    - [ ] Iteratively wipe all tiles under a given tile (all zoom levels)
+    - [ ] Iteratively prime all tiles under a given tile
 
 ## Sample Config
 ```toml
