@@ -8,13 +8,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
-	"github.com/tile-fund/lod/www/proxy"
 
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
-	"github.com/tile-fund/lod/www/handlers"
+	"github.com/tile-fund/lod/www/handlers/instance"
+	"github.com/tile-fund/lod/www/handlers/proxy"
 	"github.com/tile-fund/lod/www/middleware"
 )
 
@@ -64,18 +64,19 @@ func wireHandlers(r *fiber.App) error {
 	// recover from panics
 	r.Use(recover.New())
 
-	lodGroup := r.Group("/lod")
+	// instance handler group
+	instanceGroup := r.Group("/instance")
 
 	// wire up all middleware components
-	middleware.Wire(lodGroup)
+	middleware.Wire(instanceGroup)
 
 	// capabilities endpoint shows configuration summary
-	lodGroup.Get("/capabilities", handlers.Capabilities)
+	instanceGroup.Get("/capabilities", instance.Capabilities)
 
 	// JSON service health / status handler
-	lodGroup.Get("/status", handlers.Status)
+	instanceGroup.Get("/status", instance.Status)
 
-	// configure proxy endpoints for each configured proxy
+	// configure proxy group and endpoints for each configured proxy
 	for _, p := range config.Cap.Proxies {
 		err := proxy.WireProxy(r, p)
 		if err != nil {
