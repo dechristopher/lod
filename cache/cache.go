@@ -18,8 +18,8 @@ type CachesMap map[string]*Cache
 // Cache is a wrapper struct that operates a dual cache against the in-memory
 // LRU cache and Redis as a backing cache
 type Cache struct {
-	internal *ccache.Cache
-	proxy    config.Proxy
+	internal *ccache.Cache // pointer to internal cache instance
+	proxy    config.Proxy  // copy of the proxy configuration
 }
 
 // Tile is a wrapper struct that contains the tile PBF data and
