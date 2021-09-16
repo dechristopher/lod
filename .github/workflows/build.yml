@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build-lod-go-17-ubuntu-latest:
+  build-lod-ubuntu-latest:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
