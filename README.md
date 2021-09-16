@@ -1,6 +1,6 @@
 # [LOD](https://tile.fund/lod)
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://raw.githubusercontent.com/tile-fund/lod/master/LICENSE)
-![Build & Test](https://github.com/tile-fund/lod/actions/workflows/go.yml/badge.svg?branch=master)
+![Build & Test](https://github.com/tile-fund/lod/actions/workflows/build.yml/badge.svg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/tile-fund/lod)](https://goreportcard.com/report/github.com/tile-fund/lod)
 
 LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a 
