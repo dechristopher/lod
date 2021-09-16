@@ -22,3 +22,7 @@
 # LOD config files
 *.toml
 **/*.toml
+
+# Built binaries
+build/artifacts
+build/artifacts/**
