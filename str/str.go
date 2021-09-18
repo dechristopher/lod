@@ -40,6 +40,7 @@ const (
 	EWire           = "failed to wire up instance handlers error=%s"
 	EBadRequest     = "failed to fetch URL parameters error=%s"
 	ECacheName      = "failed to create cache, no proxy configured for name=%s"
+	ECacheEmptyTile = "empty tile in call to tile packet encode tile=%s"
 	ERead           = "read err: %s"
 	EWrite          = "write err: error=%s meta=%+v"
 )
@@ -66,7 +67,12 @@ const (
 )
 
 // (T) Test messages
-const ()
+const (
+	TCacheEncodeHeaders = "retrieved headers length did not match input, got=%d expected=%d"
+	TCacheBadHeaderData = "header data not properly encoded into tile packet"
+	TCacheBadTileData   = "tile data not properly encoded into tile packet"
+	TCacheBadValidation = "tile data corrupted, checksum failed"
+)
 
 // Help message
 const Help = `
