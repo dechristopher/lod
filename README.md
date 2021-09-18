@@ -66,7 +66,6 @@ del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
 mem_cap = 5000    # max capacity of in-memory cache
-mem_prune = 100   # number of tiles to prune when the cap is reached
 mem_ttl = 3600    # in-memory cache TTL in seconds
 redis_ttl = 86400 # redis tile cache TTL in seconds (or -1 for no TTL)
 

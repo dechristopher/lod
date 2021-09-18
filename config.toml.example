@@ -13,6 +13,5 @@ del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
 mem_cap = 5000
-mem_prune = 100
 mem_ttl = 3600
 redis_ttl = 86400
