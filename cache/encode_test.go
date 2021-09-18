@@ -35,6 +35,7 @@ func TestEncode(t *testing.T) {
 		t.Errorf(str.TCacheEncodeHeaders, tile.LenHeaders(), len(headers))
 	}
 
+	// test that header data was encoded properly
 	if !reflect.DeepEqual(tile.Headers(), headers) {
 		t.Errorf(str.TCacheBadHeaderData)
 	}
@@ -62,6 +63,7 @@ func TestEncodeNoHeaders(t *testing.T) {
 		t.Errorf(str.TCacheEncodeHeaders, tile.LenHeaders(), len(headers))
 	}
 
+	// test that header data was encoded properly
 	if !reflect.DeepEqual(tile.Headers(), headers) {
 		t.Errorf(str.TCacheBadHeaderData)
 	}

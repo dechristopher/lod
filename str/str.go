@@ -72,6 +72,7 @@ const (
 	TCacheBadHeaderData = "header data not properly encoded into tile packet"
 	TCacheBadTileData   = "tile data not properly encoded into tile packet"
 	TCacheBadValidation = "tile data corrupted, checksum failed"
+	TCacheBadDecode     = "tile decode failed, error=%s"
 )
 
 // Help message
