@@ -36,8 +36,7 @@ func (cm CachesMap) Get(name string) *Cache {
 		for _, proxy := range config.Cap.Proxies {
 			if proxy.Name == name {
 				internal := ccache.New(ccache.Configure().
-					MaxSize(int64(proxy.Cache.MemCap)).
-					ItemsToPrune(uint32(proxy.Cache.MemPrune)),
+					MaxSize(int64(proxy.Cache.MemCap)),
 				)
 				cm[name] = &Cache{
 					internal: internal,

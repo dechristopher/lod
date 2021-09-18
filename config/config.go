@@ -53,9 +53,8 @@ type Proxy struct {
 
 // Cache configuration for a Proxy instance
 type Cache struct {
-	MemCap   int `json:"mem_cap" toml:"mem_cap"`     // maximum number of tiles to store in the in-memory LRU cache
-	MemPrune int `json:"mem_prune" toml:"mem_prune"` // number tiles to prune when we hit the MemCap
-	MemTTL   int `json:"mem_ttl" toml:"mem_ttl"`     // in-memory cache TTL in seconds
+	MemCap int `json:"mem_cap" toml:"mem_cap"` // maximum number of tiles to store in the in-memory LRU cache
+	MemTTL int `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL in seconds
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
 	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or -1 for no TTL)
@@ -63,14 +62,12 @@ type Cache struct {
 
 var defaultCache = Cache{
 	MemCap:   1000,
-	MemPrune: 50,
 	MemTTL:   86400,
 	RedisTTL: 604800,
 }
 
 var zeroCache = Cache{
 	MemCap:   0,
-	MemPrune: 0,
 	MemTTL:   0,
 	RedisTTL: 0,
 }
@@ -200,12 +197,12 @@ func validateCache(proxy Proxy) error {
 			"capacity proxy=%s", proxy.Name))
 	}
 
-	if proxy.Cache.MemPrune < 1 {
+	if proxy.Cache.MemTTL != -1 && proxy.Cache.MemTTL < 1 {
 		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
-			"prune size proxy=%s", proxy.Name))
+			"memory TTL proxy=%s", proxy.Name))
 	}
 
-	if proxy.Cache.RedisTTL < 1 {
+	if proxy.Cache.RedisTTL != -1 && proxy.Cache.RedisTTL < 1 {
 		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
 			"redis TTL proxy=%s", proxy.Name))
 	}
