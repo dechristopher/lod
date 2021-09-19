@@ -25,7 +25,7 @@ func TestDecode(t *testing.T) {
 	}
 
 	// test that tile data was decoded properly
-	if !reflect.DeepEqual(decodedTile, tile) {
+	if !reflect.DeepEqual(decodedTile, testTile) {
 		t.Errorf(str.TCacheBadTileData)
 	}
 
