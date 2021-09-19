@@ -51,7 +51,7 @@ library by [karlseguin](https://github.com/karlseguin).
 port = 1337 # port to bind to
 
 [[proxies]]
-# name of this proxy, available at http://lod/{name}/{z}/{y}/{x}.pbf
+# name of this proxy, available at http://lod/{name}/{z}/{x}/{y}.pbf
 name = "osm"
 # url of the upstream tileserver
 tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf" 
