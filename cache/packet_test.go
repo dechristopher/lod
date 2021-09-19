@@ -10,13 +10,8 @@ import (
 
 // TestEncode will test that a given tile and metadata encodes properly
 func TestDecode(t *testing.T) {
-	headers := map[string]string{
-		"Content-Type":     "application/vnd.mapbox-vector-tile",
-		"Content-Encoding": "gzip",
-	}
-
 	// encode test tile
-	tile := testCache.Encode("7/37/47", testTile, headers)
+	tile := testCache.Encode("7/37/47", testTile, testHeaders)
 
 	// decode tile and check for errors
 	decodedTile, decodedHeaders, err := tile.Decode()
@@ -30,7 +25,21 @@ func TestDecode(t *testing.T) {
 	}
 
 	// test that header data was decoded properly
-	if !reflect.DeepEqual(decodedHeaders, headers) {
+	if !reflect.DeepEqual(decodedHeaders, testHeaders) {
 		t.Errorf(str.TCacheBadHeaderData)
+	}
+}
+
+// BenchmarkDecode will benchmark a standard tile and metadata decode
+func BenchmarkDecode(b *testing.B) {
+	// encode test tile
+	tile := testCache.Encode("7/37/47", testTile, testHeaders)
+
+	for i := 0; i < b.N; i++ {
+		// decode tile and check for errors
+		_, _, err := tile.Decode()
+		if err != nil {
+			b.Errorf(str.TCacheBadDecode, err.Error())
+		}
 	}
 }

@@ -18,25 +18,24 @@ var (
 			MaxSize(5000),
 		),
 	}
+	testHeaders = map[string]string{
+		"Content-Type":     "application/vnd.mapbox-vector-tile",
+		"Content-Encoding": "gzip",
+	}
 )
 
 // TestEncode will test that a given tile and metadata encodes properly
 func TestEncode(t *testing.T) {
-	headers := map[string]string{
-		"Content-Type":     "application/vnd.mapbox-vector-tile",
-		"Content-Encoding": "gzip",
-	}
-
 	// encode test tile
-	tile := testCache.Encode("7/37/47", testTile, headers)
+	tile := testCache.Encode("7/37/47", testTile, testHeaders)
 
 	// test the header counter was encoded properly
-	if tile.LenHeaders() != len(headers) {
-		t.Errorf(str.TCacheEncodeHeaders, tile.LenHeaders(), len(headers))
+	if tile.LenHeaders() != len(testHeaders) {
+		t.Errorf(str.TCacheEncodeHeaders, tile.LenHeaders(), len(testHeaders))
 	}
 
 	// test that header data was encoded properly
-	if !reflect.DeepEqual(tile.Headers(), headers) {
+	if !reflect.DeepEqual(tile.Headers(), testHeaders) {
 		t.Errorf(str.TCacheBadHeaderData)
 	}
 
@@ -76,5 +75,13 @@ func TestEncodeNoHeaders(t *testing.T) {
 	// ensure checksum is computed properly and matches stored checksum
 	if !tile.Validate() {
 		t.Errorf(str.TCacheBadValidation)
+	}
+}
+
+// BenchmarkEncode will benchmark a standard tile and metadata encode
+func BenchmarkEncode(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		// encode test tile N times
+		_ = testCache.Encode("7/37/47", testTile, testHeaders)
 	}
 }
