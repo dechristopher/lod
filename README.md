@@ -18,7 +18,7 @@
   </a>
   <br/>
   <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
-    <img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-informational?style=for-the-badge" alt="Downloads">
+    <img src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-informational?style=for-the-badge" alt="Downloads">
   </a>
   <br/>
   <a href="https://github.com/tile-fund/lod/actions/workflows/build.yml" style="text-decoration: none">
