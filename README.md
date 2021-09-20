@@ -1,4 +1,4 @@
-# Welcome!
+# README
 
 [LOD](https://tile.fund/lod): Levels of Detail
 
