@@ -18,7 +18,7 @@ import (
 
 var (
 	// Version of LOD
-	Version = "0.0.1"
+	Version = "0.1.0"
 
 	// Cap is a store for local instance Capabilities
 	Cap Capabilities
