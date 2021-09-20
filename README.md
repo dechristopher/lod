@@ -13,9 +13,6 @@
   <a href="https://github.com/tile-fund/lod/fork" style="text-decoration: none">
     <img src="https://img.shields.io/github/forks/tile-fund/lod.svg?style=flat-square" alt="Forks">
   </a>
-  <a href="https://github.com/tile-fund/lod/issues" style="text-decoration: none">
-    <img src="https://img.shields.io/github/issues/tile-fund/lod.svg?style=flat-square" alt="Issues">
-  </a>
   <a href="https://opensource.org/licenses/AGPL-3.0" style="text-decoration: none">
     <img src="https://img.shields.io/badge/license-AGPL%20v3-blue.svg?style=flat-square" alt="License: AGPL v3">
   </a>
@@ -23,12 +20,12 @@
   <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
     <img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-informational?style=for-the-badge" alt="Downloads">
   </a>
-  <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
-    <img src="https://img.shields.io/badge/DOCS-HERE-pink?style=for-the-badge" alt="Docs">
-  </a>
   <br/>
   <a href="https://github.com/tile-fund/lod/actions/workflows/build.yml" style="text-decoration: none">
     <img src="https://img.shields.io/github/workflow/status/tile-fund/lod/build?style=flat-square" alt="Build Status">
+  </a>
+  <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
+    <img src="https://img.shields.io/badge/docs-coming%20soon-pink?style=flat-square" alt="Docs">
   </a>
   <a href="https://goreportcard.com/report/github.com/tile-fund/lod" style="text-decoration: none">
     <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
