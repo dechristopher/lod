@@ -1,4 +1,39 @@
-# [LOD](https://tile.fund/lod) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://raw.githubusercontent.com/tile-fund/lod/master/LICENSE) ![Build & Test](https://github.com/tile-fund/lod/actions/workflows/build.yml/badge.svg?branch=master) [![Go Report Card](https://goreportcard.com/badge/github.com/tile-fund/lod)](https://goreportcard.com/report/github.com/tile-fund/lod)
+<!--suppress HtmlDeprecatedAttribute -->
+
+<h1 align="center"><a href="https://tile.fund/lod">LOD</a>: Levels of Detail</h1>
+<p align="center">An intelligent map tile proxy cache for the edge.</p>
+
+<p align="center">
+  <a href="https://github.com/tile-fund/lod/releases/latest" style="text-decoration: none">
+    <img src="https://img.shields.io/github/v/release/tile-fund/lod?style=flat-square" alt="Latest Release">
+  </a>
+  <a href="https://github.com/tile-fund/lod/stargazers" style="text-decoration: none">
+    <img src="https://img.shields.io/github/stars/tile-fund/lod.svg?style=flat-square" alt="Stars">
+  </a>
+  <a href="https://github.com/tile-fund/lod/fork" style="text-decoration: none">
+    <img src="https://img.shields.io/github/forks/tile-fund/lod.svg?style=flat-square" alt="Forks">
+  </a>
+  <a href="https://github.com/tile-fund/lod/issues" style="text-decoration: none">
+    <img src="https://img.shields.io/github/issues/tile-fund/lod.svg?style=flat-square" alt="Issues">
+  </a>
+  <a href="https://opensource.org/licenses/AGPL-3.0" style="text-decoration: none">
+    <img src="https://img.shields.io/badge/license-AGPL%20v3-blue.svg?style=flat-square" alt="License: AGPL v3">
+  </a>
+  <br/>
+  <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
+    <img src="https://img.shields.io/badge/platform-windows%20%7C%20macos%20%7C%20linux-informational?style=for-the-badge" alt="Downloads">
+  </a>
+  <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
+    <img src="https://img.shields.io/badge/DOCS-HERE-pink?style=for-the-badge" alt="Docs">
+  </a>
+  <br/>
+  <a href="https://github.com/tile-fund/lod/actions/workflows/build.yml" style="text-decoration: none">
+    <img src="https://img.shields.io/github/workflow/status/tile-fund/lod/build?style=flat-square" alt="Build Status">
+  </a>
+  <a href="https://goreportcard.com/report/github.com/tile-fund/lod" style="text-decoration: none">
+    <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
+  </a>
+</p>
 
 LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a 
 slim authentication backend. It will sit in front of any tile server and will 
@@ -44,7 +79,7 @@ library by [karlseguin](https://github.com/karlseguin).
     - [ ] Add to cache key for separate caching (osm/4/5/6/osm_id=19)
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
-  - [ ] Reload the instance configuration
+  - [X] Reload the instance configuration
   - [ ] Invalidate the instance caches
   - [ ] Invalidate a given tile and re-prime it
   - [ ] Iteratively invalidate all tiles under a given tile (all zoom levels)
