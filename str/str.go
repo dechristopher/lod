@@ -29,20 +29,20 @@ const (
 	CConf  = "Config"
 	CProxy = "Proxy"
 	CCache = "Cache"
+	CAdmin = "Admin"
 )
 
 // (E) Error messages
 const (
-	ELogFail        = "failed to log error=%s msg=%+v"
-	EConfig         = "failed to read config file error=%s"
+	ELogFail        = "failed to log, error=%s msg=%+v"
+	EConfig         = "failed to read config file, error=%s"
 	EConfigNotFound = "config file not found at path: '%s'"
-	EConfigPort     = "port override in env is invalid env=%s err=%s"
-	EWire           = "failed to wire up instance handlers error=%s"
-	EBadRequest     = "failed to fetch URL parameters error=%s"
-	ECacheName      = "failed to create cache, no proxy configured for name=%s"
-	ECacheEmptyTile = "empty tile in call to tile packet encode tile=%s"
-	ERead           = "read err: %s"
+	EConfigPort     = "port override in env is invalid, env=%s err=%s"
+	EBadRequest     = "failed to fetch URL parameters, error=%s"
+	ECacheName      = "failed to create cache, no proxy configured, name=%s"
+	ECacheEmptyTile = "empty tile in call to tile packet encode, tile=%s"
 	EWrite          = "write err: error=%s meta=%+v"
+	EReload         = "failed to reload instance capabilities, error=%s"
 )
 
 // (U) User-facing error messages and codes
@@ -54,6 +54,7 @@ const (
 	MInit     = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
 	MStarted  = "started in %s [env: %s][http: %d]"
 	MProxy    = "configured proxy [%s] -> %s"
+	MReload   = "reloaded instance capabilities"
 	MShutdown = "shutting down"
 	MExit     = "exit"
 )
