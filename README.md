@@ -30,6 +30,10 @@
   <a href="https://goreportcard.com/report/github.com/tile-fund/lod" style="text-decoration: none">
     <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
   </a>
+  <br/>
+  <a href="https://codecov.io/gh/tile-fund/lod">
+    <img src="https://img.shields.io/codecov/c/gh/tile-fund/lod?color=magenta&logo=codecov&style=flat-square" alt="Coverage"/>
+  </a>
 </p>
 
 LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a 
@@ -56,7 +60,7 @@ library by [karlseguin](https://github.com/karlseguin).
 - Supports [XYZ (Slippy)](https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames)
   and [TMS](https://wiki.openstreetmap.org/wiki/TMS) tile indexing schemes
 
-## v1.0.0 Feature Roadmap
+## v1.0 Feature Roadmap
 
 - [ ] Multi-level caching
     - [X] In-memory, tunable LRU cache as first level
