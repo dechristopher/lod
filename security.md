@@ -1,4 +1,4 @@
-# LOD Security Policy
+# Security Policy
 
 While LOD's security footprint isn't very large, we do take it seriously. If you find there are any vulnerable library versions or holes in our configuration checks that could impact a user's system or infrastructure, please let us know.
 
