@@ -31,19 +31,27 @@ library by [karlseguin](https://github.com/karlseguin).
     - [ ] Redis cluster with configurable TTL as second level
 - [X] Configurable header proxying and deletion
   - [X] `Content-Type` and `Content-Encoding` are added by default
-- [ ] Internal stats tracking for top-N tiles requested
+- [ ] Internal stats tracking
+  - [ ] Hits, misses, hit-rate
+  - [ ] Top-N tiles requested
+  - [ ] Tiles per second (load averages)
+  - [ ] Tile upstream fetch times (avg, 75th, 99th)
+  - [ ] Expose Prometheus endpoint
 - [ ] Supports multiple configured tileserver proxies
   - [X] Separate authentication (bearer tokens and CORS)
   - [X] Separate internal caches
+  - [ ] Allow query parameters for tile URLs
+    - [ ] Add to cache key for separate caching (osm/4/5/6/osm_id=19)
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
   - [ ] Reload the instance configuration
-  - [ ] Wipe the instance caches
+  - [ ] Invalidate the instance caches
+  - [ ] Invalidate a given tile and re-prime it
+  - [ ] Iteratively invalidate all tiles under a given tile (all zoom levels)
+  - [ ] Iteratively prime all tiles under a given tile
   - [ ] Cluster-wide operations
-    - [ ] Wipe the entire cache for a proxy on all instances
-    - [ ] Wipe a given tile and re-prime it across the cluster
-    - [ ] Iteratively wipe all tiles under a given tile (all zoom levels)
-    - [ ] Iteratively prime all tiles under a given tile
+    - [ ] Invalidate the instance caches across all instances
+    - [ ] Invalidate a given tile and re-prime it across the cluster
 
 ## Sample Config
 ```toml
