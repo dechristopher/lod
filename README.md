@@ -1,6 +1,6 @@
 <!--suppress HtmlDeprecatedAttribute -->
 
-<h1 align="center"><a href="https://tile.fund/lod">LOD</a>: Levels of Detail</h1>
+<h1 align="center"><a href="https://lod.tile.fund">LOD</a>: Levels of Detail</h1>
 <p align="center">An intelligent map tile proxy cache for the edge.</p>
 
 <p align="center">
@@ -24,8 +24,8 @@
   <a href="https://github.com/tile-fund/lod/actions/workflows/build.yml" style="text-decoration: none">
     <img src="https://img.shields.io/github/workflow/status/tile-fund/lod/build?style=flat-square" alt="Build Status">
   </a>
-  <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
-    <img src="https://img.shields.io/badge/docs-coming%20soon-pink?style=flat-square" alt="Docs">
+  <a href="https://lod.tile.fund" style="text-decoration: none">
+    <img src="https://img.shields.io/badge/docs-here-success?style=flat-square" alt="Docs">
   </a>
   <a href="https://goreportcard.com/report/github.com/tile-fund/lod" style="text-decoration: none">
     <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
