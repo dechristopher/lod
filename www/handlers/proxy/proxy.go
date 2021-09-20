@@ -19,9 +19,9 @@ type tileError struct {
 	proxy config.Proxy
 }
 
-// WireProxy configures a new proxy endpoint from the configuration under
+// wireProxy configures a new proxy endpoint from the configuration under
 // a named Router group
-func WireProxy(r *fiber.App, p config.Proxy) error {
+func wireProxy(r *fiber.App, p config.Proxy) {
 
 	proxyGroup := r.Group(p.Name)
 
@@ -36,8 +36,6 @@ func WireProxy(r *fiber.App, p config.Proxy) error {
 
 	// set common cors headers after handlers to override response from upstream
 	proxyGroup.Use(corsHeaders(p))
-
-	return nil
 }
 
 // corsHeaders sets cord headers after proxy handler execution

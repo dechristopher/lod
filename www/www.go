@@ -7,15 +7,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/recover"
-
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
-	"github.com/tile-fund/lod/www/handlers/instance"
-	"github.com/tile-fund/lod/www/handlers/proxy"
-	"github.com/tile-fund/lod/www/middleware"
+	"github.com/tile-fund/lod/www/handlers"
 )
 
 // Serve all public endpoints
@@ -30,10 +26,7 @@ func Serve() {
 	})
 
 	// wire up all route handlers
-	err := wireHandlers(r)
-	if err != nil {
-		util.Error(str.CMain, str.EWire, err.Error())
-	}
+	handlers.Wire(r)
 
 	// Graceful shutdown with SIGINT
 	// SIGTERM and others will hard kill
@@ -56,37 +49,4 @@ func Serve() {
 	// Exit cleanly
 	util.Info(str.CMain, str.MExit)
 	os.Exit(0)
-}
-
-// wireHandlers builds all the websocket and http routes
-// into the fiber app context
-func wireHandlers(r *fiber.App) error {
-	// recover from panics
-	r.Use(recover.New())
-
-	// instance handler group
-	instanceGroup := r.Group("/instance")
-
-	// wire up all middleware components
-	middleware.Wire(instanceGroup)
-
-	// capabilities endpoint shows configuration summary
-	instanceGroup.Get("/capabilities", instance.Capabilities)
-
-	// JSON service health / status handler
-	instanceGroup.Get("/status", instance.Status)
-
-	// configure proxy group and endpoints for each configured proxy
-	for _, p := range config.Cap.Proxies {
-		err := proxy.WireProxy(r, p)
-		if err != nil {
-			return err
-		}
-		util.Info(str.CMain, str.MProxy, p.Name, p.TileURL)
-	}
-
-	// Custom 404 page
-	middleware.NotFound(r)
-
-	return nil
 }
