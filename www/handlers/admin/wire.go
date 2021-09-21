@@ -16,4 +16,7 @@ func Wire(r *fiber.App) {
 
 	// reload endpoint will reload capabilities configuration from config.File
 	admin.Get("/reload", ReloadCapabilities)
+
+	// flush an entire proxy cache by name
+	admin.Get("/flush/:name", Flush)
 }
