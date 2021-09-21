@@ -45,8 +45,8 @@ deployed together.
 
 LOD is written in Go 1.17 using [fiber](https://github.com/gofiber/fiber). TOML
 is used for configuration. Go templates are used for templating. Internal 
-caching logic is built upon the [ccache](https://github.com/karlseguin/ccache)
-library by [karlseguin](https://github.com/karlseguin).
+caching logic is built upon the [bigcache](https://github.com/allegro/bigcache)
+library by [allegro](https://github.com/allegro).
 
 ## Core Principles
 
