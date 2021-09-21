@@ -26,8 +26,8 @@ jobs:
       run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
 
     - name: Coveralls
-        env:
-          COVERALLS_TOKEN: ${{ secrets.COVERALLS_SECRET }}
-        run: |
-          go install -mod=vendor github.com/mattn/goveralls
-          $(go env GOPATH)/bin/goveralls -coverprofile=coverage.txt -service=github
+      env:
+        COVERALLS_TOKEN: ${{ secrets.COVERALLS_SECRET }}
+      run: |
+        go install -mod=vendor github.com/mattn/goveralls
+        $(go env GOPATH)/bin/goveralls -coverprofile=coverage.txt -service=github
