@@ -31,8 +31,8 @@
     <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
   </a>
   <br/>
-  <a href='https://coveralls.io/github/tile-fund/lod?branch=master'>
-    <img src='https://coveralls.io/repos/github/tile-fund/lod/badge.svg?branch=master' alt='Coverage Status' />
+  <a href="https://codecov.io/gh/tile-fund/lod">
+    <img src="https://img.shields.io/codecov/c/gh/tile-fund/lod?color=magenta&logo=codecov&style=flat-square" alt="Coverage"/>
   </a>
 </p>
 

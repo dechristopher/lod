@@ -23,13 +23,8 @@ jobs:
         golint ./...
 
     - name: Test
-      run: |
-        go get -u github.com/jandelgado/gcov2lcov
-        go test -v ./... -race -coverprofile=coverage.txt
-      # && gcov2lcov -infile=coverage.txt -outfile=coverage.lcov
+      run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
 
-    - name: Send coverage to Coveralls
-      uses: shogo82148/actions-goveralls@v1
-      with:
-        path-to-profile: coverage.txt
+    - name: Upload coverage profile to Codecov
+      run: bash <(curl -s https://codecov.io/bash)
 
