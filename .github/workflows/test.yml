@@ -26,9 +26,8 @@ jobs:
       run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
 
     - name: Coveralls
-      env:
-        COVERALLS_TOKEN: ${{ secrets.COVERALLS_SECRET }}
-      run: |
-        go get github.com/mattn/goveralls
-        go install github.com/mattn/goveralls
-        $(go env GOPATH)/bin/goveralls -coverprofile=coverage.txt -service=github -repotoken $COVERALLS_TOKEN
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        path-to-lcov: coverage.txt
+
