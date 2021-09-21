@@ -23,11 +23,14 @@ jobs:
         golint ./...
 
     - name: Test
-      run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
+      run: |
+        go get -u github.com/jandelgado/gcov2lcov
+        go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic && gcov2lcov -infile=coverage.txt -outfile=coverage.lcov
+
 
     - name: Coveralls
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage.txt
+        path-to-lcov: coverage.lcov
 
