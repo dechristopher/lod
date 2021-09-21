@@ -29,5 +29,6 @@ jobs:
       env:
         COVERALLS_TOKEN: ${{ secrets.COVERALLS_SECRET }}
       run: |
+        go get github.com/mattn/goveralls
         go install github.com/mattn/goveralls
         $(go env GOPATH)/bin/goveralls -coverprofile=coverage.txt -service=github
