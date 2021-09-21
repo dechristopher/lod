@@ -139,8 +139,8 @@ func replaceParams(ctx *fiber.Ctx, url string) (string, string, error) {
 		return "", "", yErr
 	}
 
-	replacedUrl := strings.ReplaceAll(url, "{z}", strconv.Itoa(z))
-	replacedUrl = strings.ReplaceAll(replacedUrl, "{x}", strconv.Itoa(x))
-	replacedUrl = strings.ReplaceAll(replacedUrl, "{y}", strconv.Itoa(y))
-	return replacedUrl, fmt.Sprintf("%d/%d/%d", z, x, y), nil
+	replacedURL := strings.ReplaceAll(url, "{z}", strconv.Itoa(z))
+	replacedURL = strings.ReplaceAll(replacedURL, "{x}", strconv.Itoa(x))
+	replacedURL = strings.ReplaceAll(replacedURL, "{y}", strconv.Itoa(y))
+	return replacedURL, fmt.Sprintf("%d/%d/%d", z, x, y), nil
 }

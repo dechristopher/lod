@@ -109,6 +109,7 @@ func (c *Cache) Set(key string, tile TilePacket) {
 	}
 }
 
+// Flush the internal bigcache instance
 func (c *Cache) Flush() error {
 	return c.internal.Reset()
 }
