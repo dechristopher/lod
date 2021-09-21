@@ -81,12 +81,12 @@ library by [karlseguin](https://github.com/karlseguin).
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
   - [X] Reload the instance configuration
-  - [ ] Invalidate the instance caches
+  - [ ] Flush the instance caches
   - [ ] Invalidate a given tile and re-prime it
   - [ ] Iteratively invalidate all tiles under a given tile (all zoom levels)
   - [ ] Iteratively prime all tiles under a given tile
   - [ ] Cluster-wide operations
-    - [ ] Invalidate the instance caches across all instances
+    - [ ] Flush the instance caches across all instances
     - [ ] Invalidate a given tile and re-prime it across the cluster
 
 ## Sample Config
