@@ -23,6 +23,20 @@ func Serve() {
 		ReadTimeout:           time.Second * 10,
 		WriteTimeout:          time.Second * 30,
 		IdleTimeout:           time.Hour,
+		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
+			util.Error(str.CMain, str.ERequest, ctx.Body(), err.Error())
+
+			// send JSON error output if in dev mode
+			if env.IsDev() {
+				ctx.Status(500)
+				return ctx.JSON(map[string]string{
+					"error": err.Error(),
+				})
+			}
+
+			// otherwise, simply return 500
+			return ctx.SendStatus(500)
+		},
 	})
 
 	// wire up all route handlers
