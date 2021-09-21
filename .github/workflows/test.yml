@@ -25,12 +25,11 @@ jobs:
     - name: Test
       run: |
         go get -u github.com/jandelgado/gcov2lcov
-        go test -v ./... -race -coverprofile=coverage.txt && gcov2lcov -infile=coverage.txt -outfile=coverage.lcov
+        go test -v ./... -race -coverprofile=coverage.txt
+      # && gcov2lcov -infile=coverage.txt -outfile=coverage.lcov
 
-
-    - name: Coveralls
-      uses: coverallsapp/github-action@master
+    - name: Send coverage to Coveralls
+      uses: shogo82148/actions-goveralls@v1
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: coverage.lcov
+        path-to-profile: covprofile
 
