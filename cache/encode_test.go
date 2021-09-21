@@ -4,8 +4,9 @@ import (
 	_ "embed"
 	"reflect"
 	"testing"
+	"time"
 
-	"github.com/karlseguin/ccache/v2"
+	"github.com/allegro/bigcache/v2"
 	"github.com/tile-fund/lod/str"
 )
 
@@ -14,9 +15,14 @@ var testTile []byte
 
 var (
 	testCache = &Cache{
-		internal: ccache.New(ccache.Configure().
-			MaxSize(5000),
-		),
+		internal: func() *bigcache.BigCache {
+			conf := bigcache.DefaultConfig(time.Duration(3600) * time.Second)
+			cache, err := bigcache.NewBigCache(conf)
+			if err != nil {
+				panic(err)
+			}
+			return cache
+		}(),
 	}
 	testHeaders = map[string]string{
 		"Content-Type":     "application/vnd.mapbox-vector-tile",

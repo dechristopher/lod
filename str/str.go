@@ -39,10 +39,16 @@ const (
 	EConfigNotFound = "config file not found at path: '%s'"
 	EConfigPort     = "port override in env is invalid, env=%s err=%s"
 	EBadRequest     = "failed to fetch URL parameters, error=%s"
+	ECacheCreate    = "failed to create internal cache, error=%s"
 	ECacheName      = "failed to create cache, no proxy configured, name=%s"
 	ECacheEmptyTile = "empty tile in call to tile packet encode, tile=%s"
+	ECacheFetch     = "failed to fetch tile from cache, key=%s error=%s"
+	ECacheDelete    = "failed to delete tile from cache, key=%s error=%s"
+	ECacheSet       = "failed to set cache entry, key=%s error=%s"
+	ECacheFlush     = "failed to flush cache, name=%s error=%s"
 	EWrite          = "write err: error=%s meta=%+v"
 	EReload         = "failed to reload instance capabilities, error=%s"
+	ERequest        = "generic uncaught error in request chain, ctx=%s error=%s"
 )
 
 // (U) User-facing error messages and codes

@@ -40,103 +40,101 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 
 // corsHeaders sets cord headers after proxy handler execution
 func corsHeaders(p config.Proxy) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
 		// Set CORS allow methods
-		c.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		ctx.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
 		// Set CORS origin headers
-		c.Set("Access-Control-Allow-Origin", config.CorsOrigins(p))
+		ctx.Set("Access-Control-Allow-Origin", config.CorsOrigins(p))
 		return nil
 	}
 }
 
 // preflight handler for CORS OPTIONS requests
-func preflight(c *fiber.Ctx) error {
+func preflight(ctx *fiber.Ctx) error {
 	// Tell client that this pre-flight info is valid for 20 days
-	c.Set("Access-Control-Max-Age", "1728000")
-	c.Set("Content-Type", "text/plain charset=UTF-8")
-	c.Set("Content-Length", "0")
-	return c.SendStatus(fiber.StatusNoContent)
+	ctx.Set("Access-Control-Max-Age", "1728000")
+	ctx.Set("Content-Type", "text/plain charset=UTF-8")
+	ctx.Set("Content-Length", "0")
+	return ctx.SendStatus(fiber.StatusNoContent)
 }
 
 // Build a new proxy endpoint handler from configuration
 func handler(p config.Proxy) fiber.Handler {
-	return func(c *fiber.Ctx) error {
+	return func(ctx *fiber.Ctx) error {
 		// calculate url and cache key from the configured URL and params
-		url, cacheKey, err := replaceParams(c, p.TileURL)
+		url, cacheKey, err := replaceParams(ctx, p.TileURL)
 		if err != nil {
-			c.Locals("lod-cache", " :err ")
+			ctx.Locals("lod-cache", " :err ")
 			util.Error(str.CProxy, str.EBadRequest, err.Error())
-			return c.SendStatus(fiber.StatusBadRequest)
+			return ctx.SendStatus(fiber.StatusBadRequest)
 		}
 
 		if cachedTile := cache.Caches.Get(p.Name).Fetch(cacheKey); cachedTile != nil {
 			// IF WE HIT A CACHED TILE
 			// write the tile to the response body
-			_, err := c.Write(cachedTile.Data)
+			_, err := ctx.Write(cachedTile.TileData())
 			if err != nil {
-				c.Locals("lod-cache", "  :err")
+				ctx.Locals("lod-cache", "  :err")
 				util.Error(str.CProxy, str.EWrite, err.Error(), tileError{
 					url:   url,
 					proxy: p,
 				})
-				return c.SendStatus(fiber.StatusInternalServerError)
+				return ctx.SendStatus(fiber.StatusInternalServerError)
 			}
 
-			c.Locals("lod-cache", " :hit ")
+			ctx.Locals("lod-cache", " :hit ")
 
 			// set stored headers in response
-			for key, val := range cachedTile.Headers {
-				c.Set(key, val)
+			for key, val := range cachedTile.Headers() {
+				ctx.Set(key, val)
 			}
 		} else {
 			// IF WE MISSED A CACHED TILE
-			c.Locals("lod-cache", " :miss")
+			ctx.Locals("lod-cache", " :miss")
 			// perform request to tile URL
-			if err := proxy.Do(c, url); err != nil {
+			if err := proxy.Do(ctx, url); err != nil {
 				return err
 			}
 
-			if len(c.Response().Body()) > 0 {
+			if len(ctx.Response().Body()) > 0 {
 				// copy tile data into separate slice, so we don't lose the reference
-				tile := cache.Tile{
-					Data:    make([]byte, len(c.Response().Body())),
-					Headers: map[string]string{},
-				}
-				copy(tile.Data, c.Response().Body())
+				tileData := make([]byte, len(ctx.Response().Body()))
+				copy(tileData, ctx.Response().Body())
 
+				headers := map[string]string{}
 				// Store configured headers into the tile cache for this tile
-				p.PopulateHeaders(c, tile.Headers)
+				p.PopulateHeaders(ctx, headers)
 
 				// Delete headers from the final response that are on the DelHeaders list
 				// if we got them from the tileserver. This can be used to prevent leaking
 				// internals of the tileserver if you don't control what it returns
-				p.DeleteHeaders(c)
+				p.DeleteHeaders(ctx)
 
 				// spin off a routine to cache the tile without blocking the response
-				go cache.Caches.Get(p.Name).Set(cacheKey, tile)
+				go cache.Caches.Get(p.Name).EncodeSet(cacheKey, tileData, headers)
 			}
 		}
 
 		// Remove server header from response
-		c.Response().Header.Del(fiber.HeaderServer)
+		ctx.Response().Header.Del(fiber.HeaderServer)
 
-		return c.Next()
+		return ctx.Next()
 	}
 }
 
 // replaceParams will substitute URL tile params into the proxy tile URL
-func replaceParams(c *fiber.Ctx, url string) (string, string, error) {
-	z, zErr := c.ParamsInt("z")
+func replaceParams(ctx *fiber.Ctx, url string) (string, string, error) {
+	z, zErr := ctx.ParamsInt("z")
 	if zErr != nil {
 		return "", "", zErr
 	}
 
-	x, xErr := c.ParamsInt("x")
+	x, xErr := ctx.ParamsInt("x")
 	if xErr != nil {
 		return "", "", xErr
 	}
 
-	y, yErr := c.ParamsInt("y")
+	y, yErr := ctx.ParamsInt("y")
 	if yErr != nil {
 		return "", "", yErr
 	}
