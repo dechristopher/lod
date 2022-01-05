@@ -48,7 +48,14 @@ type Proxy struct {
 	AddHeaders  []string `json:"add_headers" toml:"add_headers"`   // additional headers to pull through from the tileserver
 	DelHeaders  []string `json:"del_headers" toml:"del_headers"`   // headers to exclude from the tileserver response
 	AccessToken string   `json:"-" toml:"access_token"`            // optional access token for incoming requests
+	Params      []Param  `json:"params" toml:"params"`             // URL query parameter configurations for this instance
 	Cache       Cache    `json:"cache" toml:"cache"`               // cache configuration for this proxy instance
+}
+
+// Param configuration for a proxy instance
+type Param struct {
+	Name    string `json:"name" toml:"name"`       // parameter name - exact match in URL and used as token value for cache key
+	Default string `json:"default" toml:"default"` // default parameter value if none provided in URL
 }
 
 // Cache configuration for a Proxy instance
@@ -57,13 +64,15 @@ type Cache struct {
 	MemTTL int `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL in seconds
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
-	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or -1 for no TTL)
+	RedisTTL    int    `json:"redis_ttl" toml:"redis_ttl"`       // redis tile cache TTL in seconds (or -1 for no TTL)
+	KeyTemplate string `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
 }
 
 var defaultCache = Cache{
-	MemCap:   1000,
-	MemTTL:   86400,
-	RedisTTL: 604800,
+	MemCap:      1000,
+	MemTTL:      86400,
+	RedisTTL:    604800,
+	KeyTemplate: "{z}/{x}/{y}",
 }
 
 var zeroCache = Cache{
@@ -87,6 +96,10 @@ func Read() error {
 	for i := range Cap.Proxies {
 		if Cap.Proxies[i].Cache == zeroCache {
 			Cap.Proxies[i].Cache = defaultCache
+		}
+
+		if Cap.Proxies[i].Cache.KeyTemplate == "" {
+			Cap.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
 		}
 
 		if Cap.Proxies[i].AddHeaders == nil {
@@ -167,8 +180,9 @@ func validateProxy(num int, proxy Proxy) error {
 	if err != nil {
 		return errors.Wrapf(err, "configured proxy name error name=%s", proxy.Name)
 	}
+
 	if !matched {
-		return errors.New(fmt.Sprintf("configured proxy name may only "+
+		return errors.New(fmt.Sprintf("proxy name may only "+
 			"contain alphanumerics and underscores name=%s", proxy.Name))
 	}
 
@@ -187,7 +201,17 @@ func validateProxy(num int, proxy Proxy) error {
 			"{y} placeholder proxy=%s url=%s", proxy.Name, proxy.TileURL))
 	}
 
-	return validateCache(proxy)
+	// validate the proxy's parameter configurations
+	if errParams := validateParams(proxy); errParams != nil {
+		return errParams
+	}
+
+	// validate the proxy's cache configuration
+	if errCache := validateCache(proxy); errCache != nil {
+		return errCache
+	}
+
+	return nil
 }
 
 // validateCache will validate a proxy endpoint's cache configuration
@@ -205,6 +229,57 @@ func validateCache(proxy Proxy) error {
 	if proxy.Cache.RedisTTL != -1 && proxy.Cache.RedisTTL < 1 {
 		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
 			"redis TTL proxy=%s", proxy.Name))
+	}
+
+	if !strings.Contains(proxy.Cache.KeyTemplate, "{z}") {
+		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
+			"{z} placeholder proxy=%s template=%s", proxy.Name, proxy.Cache.KeyTemplate))
+	}
+
+	if !strings.Contains(proxy.Cache.KeyTemplate, "{x}") {
+		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
+			"{x} placeholder proxy=%s template=%s", proxy.Name, proxy.Cache.KeyTemplate))
+	}
+
+	if !strings.Contains(proxy.Cache.KeyTemplate, "{y}") {
+		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
+			"{y} placeholder proxy=%s template=%s", proxy.Name, proxy.Cache.KeyTemplate))
+	}
+
+	return nil
+}
+
+// validateParams ensures configured params don't have valid and non-overlapping names
+func validateParams(proxy Proxy) error {
+	if len(proxy.Params) == 0 {
+		return nil
+	}
+
+	if len(proxy.Params) == 1 {
+		if proxy.Params[0].Name == "" {
+			return errors.New(fmt.Sprintf("proxy param must have a name defined"))
+		}
+		return nil
+	}
+
+	var usedNames []string
+
+	for i, param := range proxy.Params {
+		if proxy.Params[0].Name == "" {
+			return errors.New(fmt.Sprintf("proxy param must have a name defined for param #%d in proxy=%s",
+				i+1, proxy.Name))
+		}
+
+		for _, name := range usedNames {
+			if name == param.Name {
+				return ErrParamNameDuplicate{
+					ProxyName: proxy.Name,
+					Parameter: param,
+				}
+			}
+		}
+
+		usedNames = append(usedNames, param.Name)
 	}
 
 	return nil
