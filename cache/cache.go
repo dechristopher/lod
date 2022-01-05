@@ -3,7 +3,7 @@ package cache
 import (
 	"time"
 
-	"github.com/allegro/bigcache/v2"
+	"github.com/allegro/bigcache/v3"
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"

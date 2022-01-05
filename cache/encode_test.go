@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/allegro/bigcache/v2"
+	"github.com/allegro/bigcache/v3"
 	"github.com/tile-fund/lod/str"
 )
 
