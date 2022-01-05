@@ -30,10 +30,10 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 	middleware.Wire(r, p)
 
 	// configure CORS preflight handler
-	proxyGroup.Options("/:z/:x/:y.pbf", preflight)
+	proxyGroup.Options("/:z/:x/:y.*", preflight)
 
 	// configure proxy endpoint handler
-	proxyGroup.Get("/:z/:x/:y.pbf", handler(p))
+	proxyGroup.Get("/:z/:x/:y.*", handler(p))
 
 	// set common cors headers after handlers to override response from upstream
 	proxyGroup.Use(corsHeaders(p))
