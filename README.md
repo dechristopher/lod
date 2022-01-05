@@ -66,7 +66,7 @@ library by [allegro](https://github.com/allegro).
     - [X] In-memory, tunable LRU cache as first level
     - [ ] Redis cluster with configurable TTL as second level
 - [X] Configurable header proxying and deletion
-  - [X] `Content-Type` and `Content-Encoding` are added by default
+  - [X] `Content-Type` and `Content-Encoding` added by default
 - [ ] Internal stats tracking
   - [ ] Hits, misses, hit-rate
   - [ ] Top-N tiles requested
@@ -75,9 +75,9 @@ library by [allegro](https://github.com/allegro).
   - [ ] Expose Prometheus endpoint
 - [ ] Supports multiple configured tileserver proxies
   - [X] Separate authentication (bearer tokens and CORS)
-  - [X] Separate internal caches
-  - [ ] Allow query parameters for tile URLs
-    - [ ] Add to cache key for separate caching (osm/4/5/6/osm_id=19)
+  - [X] Separate internal cache instances per proxy
+  - [X] Allow configurable query parameters for tile URLs
+    - [X] Add to cache key for separate caching (osm/4/5/6/osm_id=19)
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
   - [X] Reload the instance configuration
