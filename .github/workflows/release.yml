@@ -65,7 +65,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: lod_linux_amd64_${VERSION}
+          name: artifact_lod_linux_amd64_${{ env.VERSION }}
           path: cmd/lod/lod_linux_amd64_${{ env.VERSION }}.zip
 
       - name: Upload release asset
@@ -121,7 +121,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: lod_darwin_amd64_${VERSION}
+          name: artifact_lod_darwin_amd64_${{ env.VERSION }}
           path: cmd/lod/lod_darwin_amd64_${{ env.VERSION }}.zip
 
       - uses: AButler/upload-release-assets@v2.0
