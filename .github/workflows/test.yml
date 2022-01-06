@@ -19,7 +19,7 @@ jobs:
 
     - name: Lint code
       run: |
-        gofiles=$(find ./ -name '*.go' -not -path "./vendor/*") && [ -z "$gofiles" ] || unformatted=$(goimports -l $gofiles) && [ -z "$unformatted" ] || (echo >&2 "Go files must be formatted with gofmt. Following files has problem: $unformatted" &&  true);
+        gofiles=$(find ./ -name '*.go' -not -path "vendor/*") && [ -z "$gofiles" ] || unformatted=$(goimports -l $gofiles) && [ -z "$unformatted" ] || (echo >&2 "Go files must be formatted with gofmt. Following files has problem: $unformatted" &&  true);
         diff <(echo -n) <(gofmt -s -d .)
         export PATH=$PATH:$(go env GOPATH)/bin # temporary fix. See https://github.com/actions/setup-go/issues/14
         go get -u golang.org/x/lint/golint
