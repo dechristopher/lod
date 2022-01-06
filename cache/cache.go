@@ -8,6 +8,7 @@ import (
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-redis/redis/v8"
 	"github.com/tile-fund/lod/config"
+	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
 )
@@ -15,6 +16,8 @@ import (
 // Caches configured for this instance
 var Caches CachesMap = make(map[string]*Cache)
 
+// cacheLock is used internally to prevent redundant
+// concurrent initialization of cache instances
 var cacheLock *sync.Mutex
 
 // CachesMap is an alias type for the map of proxy name to its cache
@@ -27,6 +30,9 @@ type Cache struct {
 	external *redis.Client      // pointer to external Redis cache
 	Proxy    *config.Proxy      // copy of the proxy configuration
 }
+
+// OneMB represents one megabyte worth of bytes
+const OneMB = 1024 * 1024
 
 // Get a cache instance by name
 func Get(name string) *Cache {
@@ -41,7 +47,9 @@ func Get(name string) *Cache {
 		for _, proxy := range config.Cap.Proxies {
 			if proxy.Name == name {
 				conf := bigcache.DefaultConfig(time.Duration(proxy.Cache.MemTTL) * time.Second)
-				conf.StatsEnabled = true
+				conf.StatsEnabled = !env.IsProd()
+				conf.MaxEntrySize = 1024 * 10 // 100KB
+				conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
 				internal, err := bigcache.NewBigCache(conf)
 
 				if err != nil {
