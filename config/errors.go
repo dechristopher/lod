@@ -2,6 +2,8 @@ package config
 
 import "fmt"
 
+// ErrParamNameDuplicate is an error struct for duplicate proxy
+// parameter names caught during the validation phase
 type ErrParamNameDuplicate struct {
 	ProxyName string
 	Parameter Param
