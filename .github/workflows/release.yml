@@ -72,7 +72,7 @@ jobs:
         if: github.event_name == 'release'
         uses: actions/upload-release-asset@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.PAT }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: cmd/lod/lod_linux_amd64_${{ env.VERSION }}.zip
@@ -127,7 +127,7 @@ jobs:
       - uses: AButler/upload-release-assets@v2.0
         with:
           files: cmd/lod/lod_darwin_amd64_${{ env.VERSION }}.zip
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.PAT }}
 
 #      - name: Upload release asset
 #        if: github.event_name == 'release'
@@ -141,7 +141,7 @@ jobs:
 #          asset_content_type: application/zip
 
   build_docker:
-    name: Build Docker image and publish to GitHub Contaner Registry
+    name: Build and Publish LOD Docker Image
     needs: gen_version
     runs-on: ubuntu-20.04
     env:
