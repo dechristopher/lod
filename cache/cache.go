@@ -123,12 +123,13 @@ func (c *Cache) Fetch(key string) *TilePacket {
 		return nil
 	}
 
-	// ensure we've got valid tile protobuf bytes
+	// wrap bytes in TilePacket container
 	tile := TilePacket(cachedTile)
-	if len(tile) == 0 {
+	// ensure we've got valid tile protobuf bytes
+	if len(tile) == 0 || !tile.Validate() {
 		// exit early and wipe cache if we cached a bad value
 		util.DebugFlag("cache", str.CCache, str.DCacheFail, key)
-		err = c.internal.Delete(key)
+		err = c.Invalidate(key)
 		if err != nil {
 			util.Error(str.CCache, str.ECacheDelete, key, err.Error())
 		}
