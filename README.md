@@ -45,7 +45,7 @@ deployed together.
 
 LOD is written in Go 1.17 using [fiber](https://github.com/gofiber/fiber). TOML
 is used for configuration. Go templates are used for templating. Internal 
-caching logic is built upon the [bigcache](https://github.com/allegro/bigcache)
+in-memory caching is built upon the [bigcache](https://github.com/allegro/bigcache)
 library by [allegro](https://github.com/allegro).
 
 ## Core Principles
@@ -108,9 +108,9 @@ add_headers = [ "X-We-Want-This", "X-This-One-Too" ]
 del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
-mem_cap = 5000    # max capacity of in-memory cache
+mem_cap = 100    # maximum capacity in MB of the in-memory cache
 mem_ttl = 3600    # in-memory cache TTL in seconds
-redis_ttl = 86400 # redis tile cache TTL in seconds (or -1 for no TTL)
+redis_ttl = 86400 # redis tile cache TTL in seconds (or 0 for no TTL)
 redis_url = "redis://localhost:6379/0" # redis connection URL
 key_template = "{z}/{x}/{y}" # cache key template string, supports parameter names
 
