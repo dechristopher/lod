@@ -68,14 +68,14 @@ Or just use our Docker image!
 
 You can create your own Dockerfile that adds a `config.toml` from the context into the config directory, like so:
 ```Dockerfile
-FROM lod:0.4.0
+FROM tilefund/lod:0.4.0
 COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
 CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
 ```
 
 Alternatively, you can specify something along the same lines with Docker run options:
 ```bash
-$ docker run -v /myredis/conf:/usr/local/etc/redis --name myredis redis redis-server /usr/local/etc/redis/redis.conf
+$ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt/lod_config/config.toml
 ```
 
 ## Core Principles

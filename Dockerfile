@@ -6,17 +6,17 @@
 #
 # Example use with http-based config:
 #
-#	$ docker run -p 1337 lod --conf http://my-domain.com/config
+#	$ docker run -p 1337:1337 lod --conf http://my-domain.com/config
 #
 # Example use with local config:
 #
 #	$ mkdir lod-config
 #	$ cp your_config.toml lod-config/config.toml
-#	$ docker run -v /path/to/lod-config:/opt/lod_config -p 1337 lod --conf /opt/lod_config/config.toml
+#	$ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt/lod_config/config.toml
 #
 # You can create your own Dockerfile that adds a `config.toml` from the context into the config directory, like so:
 #
-#   # FROM ghcr.io/tile-fund/lod:0.4.0
+#   # FROM tilefund/lod:0.4.0
 #   # COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
 #   # CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
 #
