@@ -11,7 +11,6 @@ import (
 	"github.com/tile-fund/lod/config"
 
 	"github.com/tile-fund/lod/env"
-	"github.com/tile-fund/lod/util"
 )
 
 const logFormatProd = "${ip} ${header:x-forwarded-for} ${header:x-real-ip} " +
@@ -47,23 +46,6 @@ func Wire(r fiber.Router, proxy ...config.Proxy) {
 		Format:     logFormat(),
 		Output:     os.Stdout,
 	}))
-
-	// set browser id cookie
-	r.Use(func(c *fiber.Ctx) error {
-		if c.Cookies("bid") == "" {
-			c.Cookie(&fiber.Cookie{
-				Name:     "bid",
-				Value:    util.GenerateCode(16),
-				Path:     "/",
-				Domain:   "",
-				MaxAge:   0,
-				Secure:   !env.IsDev(),
-				HTTPOnly: true,
-				SameSite: "Strict",
-			})
-		}
-		return c.Next()
-	})
 }
 
 // NotFound wires the final 404 handler after all other
