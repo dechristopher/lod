@@ -46,11 +46,7 @@ func Error(caller, message string, args ...interface{}) {
 // Standard in developer mode and JSON in deploy mode
 func printLog(severity, format, caller, message string, args ...interface{}) {
 	if env.GetEnv() == env.Dev {
-		// increase padding as we see longer callers
-		if len(caller) > str.CPadding {
-			str.CPadding = len(caller)
-		}
-		log.Printf(format, fmt.Sprintf("%*s", str.CPadding, caller), fmt.Sprintf(message, args...))
+		log.Printf(format, fmt.Sprintf("%s", caller), fmt.Sprintf(message, args...))
 	} else {
 		logMessage := LogMessage{
 			Time:     MilliTime(),

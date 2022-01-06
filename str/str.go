@@ -1,8 +1,5 @@
 package str
 
-// CPadding is the current max caller padding, dynamically increased
-var CPadding = 0
-
 // Flags, log formats and miscellaneous strings
 const (
 	FConfigFile      = "conf"
@@ -25,11 +22,11 @@ const (
 // (C) Log caller names
 const (
 	CMain  = "LOD"
-	CLog   = "Log"
-	CConf  = "Config"
-	CProxy = "Proxy"
-	CCache = "Cache"
-	CAdmin = "Admin"
+	CLog   = "LOG"
+	CConf  = "CFG"
+	CProxy = "PRX"
+	CCache = "CCH"
+	CAdmin = "ADM"
 )
 
 // (E) Error messages
