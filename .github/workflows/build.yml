@@ -19,7 +19,7 @@ jobs:
         go-version: 1.17
 
     - name: Install GEOS
-      run: apt update && apt install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
+      run: sudo apt update && sudo apt -y install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
 
     - name: Build
       run: go build -v ./...
