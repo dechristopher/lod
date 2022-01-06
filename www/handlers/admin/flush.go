@@ -8,7 +8,7 @@ import (
 	"github.com/tile-fund/lod/util"
 )
 
-// Flush an entire proxy cache by name
+// Flush an entire proxy cache by name, or all caches by providing a name of "all"
 func Flush(ctx *fiber.Ctx) error {
 	name := ctx.Params("name")
 	if name == "" {
@@ -21,7 +21,7 @@ func Flush(ctx *fiber.Ctx) error {
 
 	// search for proxy with given name
 	for _, proxy := range config.Cap.Proxies {
-		if proxy.Name == name {
+		if proxy.Name == name || name == "all" {
 			// flush the proxy's internal cache
 			err := cache.Caches.Get(name).Flush()
 
@@ -34,11 +34,20 @@ func Flush(ctx *fiber.Ctx) error {
 				})
 			}
 
-			ctx.Status(200)
-			return ctx.JSON(map[string]string{
-				"status": "ok",
-			})
+			if name != "all" {
+				ctx.Status(200)
+				return ctx.JSON(map[string]string{
+					"status": "ok",
+				})
+			}
 		}
+	}
+
+	if name == "all" {
+		ctx.Status(200)
+		return ctx.JSON(map[string]string{
+			"status": "ok",
+		})
 	}
 
 	// 404 if no proxy found with given name
