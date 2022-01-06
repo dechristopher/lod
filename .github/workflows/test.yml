@@ -29,7 +29,7 @@ jobs:
       with:
         # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
         version: latest
-        args: --print-issued-lines
+        args: --print-issued-lines --exclude-use-default=false
 
     - name: Test
       run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
