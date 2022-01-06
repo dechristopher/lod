@@ -17,6 +17,11 @@ import (
 // |----------------------------------------------------------------------|
 type TilePacket []byte
 
+// Raw returns the TilePacket as a byte array
+func (t TilePacket) Raw() []byte {
+	return t
+}
+
 // Decode a TilePacket back into raw tile data and corresponding metadata
 func (t TilePacket) Decode() ([]byte, map[string]string, error) {
 	// ensure that the stored data is valid
