@@ -18,5 +18,21 @@ func Wire(r *fiber.App) {
 	admin.Get("/reload", ReloadCapabilities)
 
 	// flush an entire proxy cache by name
-	admin.Get("/flush/:name", Flush)
+	admin.Get("/:name/flush/", Flush)
+
+	// invalidate a given tile without re-priming
+	admin.Get("/:name/invalidate/:z/:x/:y", InvalidateTile)
+
+	// invalidate and a given tile and all of its children up to a given max
+	// maxZoom defaults to zoom level 12
+	admin.Get("/:name/invalidate/deep/:z/:x/:y", InvalidateTileDeep)
+	admin.Get("/:name/invalidate/deep/:z/:x/:y/:maxZoom", InvalidateTileDeep)
+
+	// invalidate and prime a given tile
+	admin.Get("/:name/prime/:z/:x/:y", PrimeTile)
+
+	// invalidate and prime a given tile and all of its children up to a given max
+	// maxZoom defaults to zoom level 12
+	admin.Get("/:name/prime/deep/:z/:x/:y", PrimeTileDeep)
+	admin.Get("/:name/prime/deep/:z/:x/:y/:maxZoom", PrimeTileDeep)
 }
