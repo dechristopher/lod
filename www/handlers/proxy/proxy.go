@@ -1,15 +1,13 @@
 package proxy
 
 import (
-	"fmt"
 	"net/url"
-	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
 	"github.com/tile-fund/lod/cache"
 	"github.com/tile-fund/lod/config"
+	"github.com/tile-fund/lod/helpers"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
 	"github.com/tile-fund/lod/www/middleware"
@@ -61,13 +59,16 @@ func preflight(ctx *fiber.Ctx) error {
 
 // Build a new proxy endpoint handler from configuration
 func handler(p config.Proxy) fiber.Handler {
+	// preconfigure cache on boot
+	cache.Get(p.Name)
+
 	return func(ctx *fiber.Ctx) error {
 		// check presence of configured URL parameters and store
 		// their values in a map within the request locals
-		fillParamsMap(p, ctx)
+		helpers.FillParamsMap(p, ctx)
 
 		// calculate url from the configured URL and params
-		tileUrl, err := getBaseUrl(p, ctx)
+		tileUrl, err := buildTileUrl(p, ctx)
 		if err != nil {
 			ctx.Locals("lod-cache", " :err ")
 			util.Error(str.CProxy, str.EBadRequest, err.Error())
@@ -75,9 +76,9 @@ func handler(p config.Proxy) fiber.Handler {
 		}
 
 		// calculate the cache key for this request using XYZ and URL params
-		cacheKey, err := buildCacheKey(p, ctx)
+		cacheKey, err := helpers.BuildCacheKey(p, ctx)
 
-		if cachedTile := cache.Caches.Get(p.Name).Fetch(cacheKey); cachedTile != nil {
+		if cachedTile := cache.Get(p.Name).Fetch(cacheKey); cachedTile != nil {
 			// IF WE HIT A CACHED TILE
 			// write the tile to the response body
 			_, err := ctx.Write(cachedTile.TileData())
@@ -119,7 +120,7 @@ func handler(p config.Proxy) fiber.Handler {
 				p.DeleteHeaders(ctx)
 
 				// spin off a routine to cache the tile without blocking the response
-				go cache.Caches.Get(p.Name).EncodeSet(cacheKey, tileData, headers)
+				go cache.Get(p.Name).EncodeSet(cacheKey, tileData, headers)
 			}
 		}
 
@@ -130,33 +131,18 @@ func handler(p config.Proxy) fiber.Handler {
 	}
 }
 
-// fillParamsMap will populate a map local to the request context with configured
-// parameter values if any are present in the request
-func fillParamsMap(proxy config.Proxy, ctx *fiber.Ctx) {
-	paramsMap := make(map[string]string)
-	for _, param := range proxy.Params {
-		if val := ctx.Params(param.Name, param.Default); val != "" {
-			paramsMap[param.Name] = val
-		}
-	}
-
-	if len(paramsMap) > 0 {
-		ctx.Locals("params", paramsMap)
-	}
-}
-
-// getBaseUrl will substitute URL tile params into the proxy tile URL
-func getBaseUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
-	x, y, z, err := getXYZ(ctx)
+// buildTileUrl will substitute URL tile params into the proxy tile URL
+func buildTileUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
+	currentTile, err := helpers.GetTile(ctx)
 	if err != nil {
 		return "", err
 	}
 
 	// replace XYZ values in the tile URL
-	baseUrl := replaceXYZ(proxy.TileURL, x, y, z)
+	baseUrl := currentTile.InjectString(proxy.TileURL)
 
 	// fetch params from context for possible addition to URL
-	paramsMap := getParamsFromCtx(ctx)
+	paramsMap := helpers.GetParamsFromCtx(ctx)
 
 	// if no query parameters, return baseUrl
 	if paramsMap == nil {
@@ -180,65 +166,4 @@ func getBaseUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
 
 	// return generated URL with substitutions for query parameters
 	return paramUrl.String(), nil
-}
-
-// buildCacheKey will put together a cache key from the configured template
-func buildCacheKey(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
-	x, y, z, err := getXYZ(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	// replace XYZ values in the key template
-	key := replaceXYZ(proxy.Cache.KeyTemplate, x, y, z)
-
-	// fetch params from context for possible substitution
-	paramsMap := getParamsFromCtx(ctx)
-	if paramsMap == nil {
-		return key, nil
-	}
-
-	// replace params by name in the key template if any exist
-	for param, val := range paramsMap {
-		key = strings.ReplaceAll(key, fmt.Sprintf("{%s}", param), val)
-	}
-
-	return key, nil
-}
-
-// getXYZ returns the XYZ values as integers from the request URL
-func getXYZ(ctx *fiber.Ctx) (int, int, int, error) {
-	x, xErr := ctx.ParamsInt("x")
-	if xErr != nil {
-		return 0, 0, 0, xErr
-	}
-
-	y, yErr := ctx.ParamsInt("y")
-	if yErr != nil {
-		return 0, 0, 0, yErr
-	}
-
-	z, zErr := ctx.ParamsInt("z")
-	if zErr != nil {
-		return 0, 0, 0, zErr
-	}
-
-	return x, y, z, nil
-}
-
-// getParamsFromCtx will attempt to fetch the params map from the request
-// context locals if any parameters are present and valid
-func getParamsFromCtx(ctx *fiber.Ctx) map[string]string {
-	if ctx.Locals("params") != nil {
-		return ctx.Locals("params").(map[string]string)
-	}
-	return nil
-}
-
-// replaceXYZ fills the {x}, {y}, and {z} tokens in a template URL
-//  or cache key with the provided values
-func replaceXYZ(base string, x, y, z int) string {
-	base = strings.ReplaceAll(base, "{x}", strconv.Itoa(x))
-	base = strings.ReplaceAll(base, "{y}", strconv.Itoa(y))
-	return strings.ReplaceAll(base, "{z}", strconv.Itoa(z))
 }
