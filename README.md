@@ -48,6 +48,36 @@ is used for configuration. Go templates are used for templating. Internal
 in-memory caching is built upon the [bigcache](https://github.com/allegro/bigcache)
 library by [allegro](https://github.com/allegro).
 
+## Getting Started
+Download a build from the releases page or just run:
+```bash
+$ go install github.com/tile-fund/lod@latest
+```
+
+```bash
+Flags:
+  --conf  Path to TOML configuration file. Default: config.toml
+  --dev   Whether to enable developer mode. Default: false
+  --debug Optional comma separated debug flags. Ex: foo,bar,baz
+  --help  Shows this help menu.
+Usage:
+  lod [--conf config.toml] [--dev]
+```
+
+Or just use our Docker image!
+
+You can create your own Dockerfile that adds a `config.toml` from the context into the config directory, like so:
+```Dockerfile
+FROM lod:0.4.0
+COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
+CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
+```
+
+Alternatively, you can specify something along the same lines with Docker run options:
+```bash
+$ docker run -v /myredis/conf:/usr/local/etc/redis --name myredis redis redis-server /usr/local/etc/redis/redis.conf
+```
+
 ## Core Principles
 
 - Lightweight, parallel, and non-blocking
