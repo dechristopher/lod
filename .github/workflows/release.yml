@@ -1,25 +1,29 @@
 name: release
 
 on:
+  push:
+    tags:
+      - v*
   release:
-    types: [published]
+    types:
+      - published
 
 jobs:
-  gen_version:
+  version:
     name: Set LOD version
     runs-on: ubuntu-20.04
 
     steps:
-    # on release, we want to use release.tag_name for the version
-    - name: Set LOD version (use release.tag_name)
-      if: github.event_name == 'release'
-      run: echo ${{ github.event.release.tag_name }} > ${{ github.workspace }}/version.txt
+      # on release, we want to use release.tag_name for the version
+      - name: Set LOD version (use release.tag_name)
+        if: github.event_name == 'release'
+        run: echo ${{ github.event.release.tag_name }} > ${{ github.workspace }}/version.txt
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: version
-        path: ${{ github.workspace }}/version.txt
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: version
+          path: ${{ github.workspace }}/version.txt
 
   build_linux:
     name: Build for Linux
@@ -27,56 +31,56 @@ jobs:
     runs-on: ubuntu-20.04
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
-      with:
-        name: version
+      - name: Download version artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: version
 
-    - name: Set LOD version
-      run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
+      - name: Set LOD version
+        run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
 
-    - name: Set up Go 1.17
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.17
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
 
-    - name: Install GEOS with apt
-      run: sudo apt update && sudo apt -y install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
+      - name: Install GEOS with apt
+        run: sudo apt update && sudo apt -y install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
 
-    - name: Build LOD for Linux
-      env:
-        # build architecture
-        GOOS: linux
-      run: |
+      - name: Build LOD for Linux
+        env:
+          # build architecture
+          GOOS: linux
+        run: |
           cd cmd/lod
           go build -mod vendor -ldflags "-w -X 'github.com/tile-fund/lod/config.Version=${VERSION}'"
 
-    # workaround for archives losing permissions 
-    # https://github.com/actions/upload-artifact/issues/38
-    - name: Zip archive permissions workaround
-      run: |
-        cd cmd/lod
-        zip -9 -D lod.zip lod
+      # workaround for archives losing permissions
+      # https://github.com/actions/upload-artifact/issues/38
+      - name: Zip archive permissions workaround
+        run: |
+          cd cmd/lod
+          zip -9 -D lod.zip lod
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: lod_linux_amd64
-        path: cmd/lod/lod.zip
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: lod_linux_amd64
+          path: cmd/lod/lod.zip
 
-    - name: Upload release asset
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: cmd/lod/lod.zip
-        asset_name: lod_linux_amd64.zip
-        asset_content_type: application/zip
+      - name: Upload release asset
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: cmd/lod/lod.zip
+          asset_name: lod_linux_amd64.zip
+          asset_content_type: application/zip
 
   build_macos:
     name: Build LOD for MacOS
@@ -84,55 +88,55 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
-      with:
-        name: version
+      - name: Download version artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: version
 
-    - name: Set LOD version
-      run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
+      - name: Set LOD version
+        run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
 
-    - name: Set up Go 1.17
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.17
+      - name: Set up Go 1.17
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
 
-  - name: Install GEOS with Homebrew
-      run: brew install geos
+      - name: Install GEOS with Homebrew
+        run: brew install geos
 
-    - name: Build for Darwin
-      env:
-        GOOS: darwin
-      run: |
+      - name: Build for Darwin
+        env:
+          GOOS: darwin
+        run: |
           cd cmd/lod
           go build -mod vendor -ldflags "-w -X 'github.com/tile-fund/lod/config.Version=${VERSION}'"
 
-    # workaround for archives losing permissions
-    # https://github.com/actions/upload-artifact/issues/38
-    - name: Zip archive permissions workaround
-      run: |
-        cd cmd/lod
-        zip -9 -D lod.zip lod
+      # workaround for archives losing permissions
+      # https://github.com/actions/upload-artifact/issues/38
+      - name: Zip archive permissions workaround
+        run: |
+          cd cmd/lod
+          zip -9 -D lod.zip lod
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: lod_darwin_amd64
-        path: cmd/lod/lod.zip
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: lod_darwin_amd64
+          path: cmd/lod/lod.zip
 
-    - name: Upload release asset
-      if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: cmd/lod/lod.zip
-        asset_name: lod_darwin_amd64.zip
-        asset_content_type: application/zip
+      - name: Upload release asset
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: cmd/lod/lod.zip
+          asset_name: lod_darwin_amd64.zip
+          asset_content_type: application/zip
 
   build_docker:
     name: Build Docker image and publish to GitHub Contaner Registry
@@ -143,26 +147,26 @@ jobs:
       GHCR_REPO: lod
 
     steps:
-    - name: Check out code
-      uses: actions/checkout@v2
+      - name: Check out code
+        uses: actions/checkout@v2
 
-    - name: Download version artifact
-      uses: actions/download-artifact@v1
-      with:
-        name: version
+      - name: Download version artifact
+        uses: actions/download-artifact@v1
+        with:
+          name: version
 
-    - name: Set LOD version
-      run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
+      - name: Set LOD version
+        run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
 
-    - name: Build and tag Docker container
-      run: |
-        docker build -t lod --build-arg VERSION=${VERSION} .
-        docker tag lod:latest ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-        docker tag lod:latest ${GHCR_ORG}/${GHCR_REPO}:latest
+      - name: Build and tag Docker container
+        run: |
+          docker build -t lod --build-arg VERSION=${VERSION} .
+          docker tag lod:latest ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
+          docker tag lod:latest ${GHCR_ORG}/${GHCR_REPO}:latest
 
-    - name: Publish Docker container
-      if: github.event_name == 'release'
-      run: |
-        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-        docker push ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-        docker push ${GHCR_ORG}/${GHCR_REPO}:latest
+      - name: Publish Docker container
+        if: github.event_name == 'release'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker push ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
+          docker push ${GHCR_ORG}/${GHCR_REPO}:latest
