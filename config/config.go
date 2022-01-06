@@ -226,8 +226,8 @@ func validateCache(proxy Proxy) error {
 			"memory TTL proxy=%s", proxy.Name))
 	}
 
-	if proxy.Cache.RedisTTL != -1 && proxy.Cache.RedisTTL < 1 {
-		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
+	if proxy.Cache.RedisTTL < 0 {
+		return errors.New(fmt.Sprintf("proxy cache cannot have negative "+
 			"redis TTL proxy=%s", proxy.Name))
 	}
 
