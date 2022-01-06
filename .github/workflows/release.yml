@@ -140,7 +140,7 @@ jobs:
     needs: gen_version
     runs-on: ubuntu-20.04
     env:
-      GHCR_ORG: tile-fund
+      GHCR_ORG: ghcr.io/tile-fund
       GHCR_REPO: lod
 
     steps:
@@ -157,13 +157,13 @@ jobs:
 
       - name: Build and tag Docker container
         run: |
-          docker build -t lod --build-arg VERSION=${VERSION} .
-          docker tag lod:latest ghcr.io/${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-          docker tag lod:latest ghcr.io/${GHCR_ORG}/${GHCR_REPO}:latest
+          docker build -t ${GHCR_ORG}/${GHCR_REPO} --build-arg VERSION=${VERSION} .
+          docker tag ${GHCR_ORG}/${GHCR_REPO}:latest ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
+          docker tag ${GHCR_ORG}/${GHCR_REPO}:latest ${GHCR_ORG}/${GHCR_REPO}:latest
 
       - name: Publish Docker container
         if: github.event_name == 'release'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ghcr.io/${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-          docker push ghcr.io/${GHCR_ORG}/${GHCR_REPO}:latest
+          docker push ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
+          docker push ${GHCR_ORG}/${GHCR_REPO}:latest
