@@ -68,7 +68,7 @@ Or just use our Docker image!
 
 You can create your own Dockerfile that adds a `config.toml` from the context into the config directory, like so:
 ```Dockerfile
-FROM tilefund/lod:0.4.0
+FROM tilefund/lod:0.4.6
 COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
 CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
 ```
