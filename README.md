@@ -69,7 +69,6 @@ library by [allegro](https://github.com/allegro).
   - [X] `Content-Type` and `Content-Encoding` added by default
 - [ ] Internal stats tracking
   - [ ] Hits, misses, hit-rate
-  - [ ] Top-N tiles requested
   - [ ] Tiles per second (load averages)
   - [ ] Tile upstream fetch times (avg, 75th, 99th)
   - [ ] Expose Prometheus endpoint
