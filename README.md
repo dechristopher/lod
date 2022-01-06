@@ -80,9 +80,9 @@ library by [allegro](https://github.com/allegro).
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
   - [X] Reload the instance configuration
-  - [ ] Flush the instance caches
+  - [X] Flush the instance caches
   - [ ] Invalidate a given tile and re-prime it
-  - [ ] Iteratively invalidate all tiles under a given tile (all zoom levels)
+  - [X] Iteratively invalidate all tiles under a given tile (all zoom levels)
   - [ ] Iteratively prime all tiles under a given tile
   - [ ] Cluster-wide operations
     - [ ] Flush the instance caches across all instances

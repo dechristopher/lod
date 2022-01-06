@@ -49,16 +49,21 @@ func Get(name string) *Cache {
 					return nil
 				}
 
-				external := redis.NewClient(&redis.Options{
-					Addr:     "127.0.0.1:6379",
-					Password: "", // no password set
-					DB:       0,  // use default DB
-				})
+				var external *redis.Client
 
-				_, err = external.Ping(context.Background()).Result()
-				if err != nil {
-					util.Error(str.CCache, str.ECacheCreate, err.Error())
-					return nil
+				if proxy.Cache.RedisURL != "" {
+					opts, err := redis.ParseURL(proxy.Cache.RedisURL)
+					if err != nil {
+						util.Error(str.CCache, str.ECacheCreate, err.Error())
+						return nil
+					}
+					external = redis.NewClient(opts)
+
+					_, err = external.Ping(context.Background()).Result()
+					if err != nil {
+						util.Error(str.CCache, str.ECacheCreate, err.Error())
+						return nil
+					}
 				}
 
 				util.DebugFlag("cache", str.CCache, str.DCacheUp, name)
@@ -91,7 +96,7 @@ func (c *Cache) Fetch(key string) *TilePacket {
 		}
 	}
 
-	if cachedTile == nil {
+	if cachedTile == nil && c.external != nil {
 		// try fetching from redis if not present in internal cache
 		redisTile := c.external.Get(context.Background(), key)
 		if redisTile.Err() != nil {
@@ -150,7 +155,7 @@ func (c *Cache) EncodeSet(key string, tileData []byte, headers map[string]string
 // Set the tile in all cache levels with the configured TTLs
 func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
 	util.DebugFlag("cache", str.CCache, str.DCacheSet, key, len(tile))
-	if len(internalOnly) == 0 || !internalOnly[0] {
+	if len(internalOnly) == 0 || !internalOnly[0] && c.external != nil {
 		go func() {
 			status := c.external.Set(context.Background(), key, tile.Raw(),
 				time.Second*time.Duration(c.Proxy.Cache.RedisTTL))
@@ -172,9 +177,11 @@ func (c *Cache) Invalidate(key string) error {
 		return err
 	}
 
-	status := c.external.Del(context.Background(), key)
-	if status.Err() != nil {
-		return status.Err()
+	if c.external != nil {
+		status := c.external.Del(context.Background(), key)
+		if status.Err() != nil {
+			return status.Err()
+		}
 	}
 
 	return nil

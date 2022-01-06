@@ -64,21 +64,24 @@ type Cache struct {
 	MemTTL int `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL in seconds
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
-	RedisTTL    int    `json:"redis_ttl" toml:"redis_ttl"`       // redis tile cache TTL in seconds (or -1 for no TTL)
+	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or -1 for no TTL)
+	// Example: redis://<user>:<password>@<host>:<port>/<db_number>
+	RedisURL    string `json:"-" toml:"redis_url"`               // full redis connection URL for parsing, SENSITIVE
 	KeyTemplate string `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
 }
 
 var defaultCache = Cache{
 	MemCap:      1000,
 	MemTTL:      86400,
-	RedisTTL:    604800,
 	KeyTemplate: "{z}/{x}/{y}",
 }
 
 var zeroCache = Cache{
-	MemCap:   0,
-	MemTTL:   0,
-	RedisTTL: 0,
+	MemCap:      0,
+	MemTTL:      0,
+	RedisTTL:    0,
+	RedisURL:    "",
+	KeyTemplate: "",
 }
 
 // Read config file into Capabilities
