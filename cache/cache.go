@@ -1,9 +1,12 @@
 package cache
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"github.com/allegro/bigcache/v3"
+	"github.com/go-redis/redis/v8"
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
@@ -12,19 +15,28 @@ import (
 // Caches configured for this instance
 var Caches CachesMap = make(map[string]*Cache)
 
+var cacheLock *sync.Mutex
+
 // CachesMap is an alias type for the map of proxy name to its cache
 type CachesMap map[string]*Cache
 
 // Cache is a wrapper struct that operates a dual cache against the in-memory
-// LRU cache and Redis as a backing cache
+// cache and Redis as a backing cache
 type Cache struct {
 	internal *bigcache.BigCache // pointer to internal cache instance
-	proxy    config.Proxy       // copy of the proxy configuration
+	external *redis.Client      // pointer to external Redis cache
+	Proxy    *config.Proxy      // copy of the proxy configuration
 }
 
 // Get a cache instance by name
-func (cm CachesMap) Get(name string) *Cache {
-	if cm[name] == nil {
+func Get(name string) *Cache {
+	if Caches[name] == nil {
+		if cacheLock == nil {
+			cacheLock = &sync.Mutex{}
+		}
+
+		cacheLock.Lock()
+		defer cacheLock.Unlock()
 		// find and populate a new cache instance for the given name
 		for _, proxy := range config.Cap.Proxies {
 			if proxy.Name == name {
@@ -37,18 +49,33 @@ func (cm CachesMap) Get(name string) *Cache {
 					return nil
 				}
 
-				cm[name] = &Cache{
-					internal: internal,
-					proxy:    proxy,
+				external := redis.NewClient(&redis.Options{
+					Addr:     "127.0.0.1:6379",
+					Password: "", // no password set
+					DB:       0,  // use default DB
+				})
+
+				_, err = external.Ping(context.Background()).Result()
+				if err != nil {
+					util.Error(str.CCache, str.ECacheCreate, err.Error())
+					return nil
 				}
-				return cm[name]
+
+				util.DebugFlag("cache", str.CCache, str.DCacheUp, name)
+
+				Caches[name] = &Cache{
+					internal: internal,
+					external: external,
+					Proxy:    &proxy,
+				}
+				return Caches[name]
 			}
 		}
 		// if this happens, there's an edge case somewhere
 		util.Error(str.CCache, str.ECacheName, name)
 	}
 
-	return cm[name]
+	return Caches[name]
 }
 
 // Fetch will attempt to grab a tile by key from any of the cache layers,
@@ -57,17 +84,37 @@ func (c *Cache) Fetch(key string) *TilePacket {
 	cachedTile, err := c.internal.Get(key)
 	if err != nil {
 		if err == bigcache.ErrEntryNotFound {
-			// exit early if we don't have anything cached
-			go util.Debug(str.CCache, str.DCacheMiss, key)
+			util.DebugFlag("cache", str.CCache, str.DCacheMiss, key)
+		} else {
+			util.Error(str.CCache, str.ECacheFetch, key, err.Error())
 			return nil
 		}
-		go util.Error(str.CCache, str.ECacheFetch, key, err.Error())
-		return nil
 	}
 
 	if cachedTile == nil {
-		// exit early if we don't have anything cached
-		go util.Debug(str.CCache, str.DCacheMiss, key)
+		// try fetching from redis if not present in internal cache
+		redisTile := c.external.Get(context.Background(), key)
+		if redisTile.Err() != nil {
+			if redisTile.Err() == redis.Nil {
+				// exit early if we don't have anything cached at any level
+				util.DebugFlag("cache", str.CCache, str.DCacheMissExt, key)
+				return nil
+			}
+			util.Error(str.CCache, str.ECacheFetch, key, err.Error())
+			return nil
+		}
+
+		// squeeze out the bytes from the redis response
+		cachedTile, err = redisTile.Bytes()
+		if err != nil {
+			util.Error(str.CCache, str.ECacheFetch, key, err.Error())
+			return nil
+		}
+	}
+
+	if cachedTile == nil {
+		// exit if we don't have anything cached at any level
+		util.DebugFlag("cache", str.CCache, str.DCacheMissExt, key)
 		return nil
 	}
 
@@ -75,19 +122,20 @@ func (c *Cache) Fetch(key string) *TilePacket {
 	tile := TilePacket(cachedTile)
 	if len(tile) == 0 {
 		// exit early and wipe cache if we cached a bad value
-		go util.Debug(str.CCache, str.DCacheFail, key)
+		util.DebugFlag("cache", str.CCache, str.DCacheFail, key)
 		err = c.internal.Delete(key)
 		if err != nil {
-			go util.Error(str.CCache, str.ECacheDelete, key, err.Error())
+			util.Error(str.CCache, str.ECacheDelete, key, err.Error())
 		}
 		return nil
 	}
 
-	go util.Debug(str.CCache, str.DCacheHit, key, len(tile))
+	util.DebugFlag("cache", str.CCache, str.DCacheHit, key, len(tile))
 
-	// extend TTL (keeping entry alive) by resetting the entry
+	// extend internal cache TTL (keeping entry alive) by resetting the entry
+	// this also sets internal cache entries if we find a tile in redis but not internally
 	// TODO investigate alternative methods of preventing entry death
-	go c.Set(key, cachedTile)
+	go c.Set(key, cachedTile, true)
 
 	return &tile
 }
@@ -100,13 +148,36 @@ func (c *Cache) EncodeSet(key string, tileData []byte, headers map[string]string
 }
 
 // Set the tile in all cache levels with the configured TTLs
-func (c *Cache) Set(key string, tile TilePacket) {
-	// go redis.Set(key, tile, etc)
-	util.Debug(str.CCache, str.DCacheSet, key, len(tile))
+func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
+	util.DebugFlag("cache", str.CCache, str.DCacheSet, key, len(tile))
+	if len(internalOnly) == 0 || !internalOnly[0] {
+		go func() {
+			status := c.external.Set(context.Background(), key, tile.Raw(),
+				time.Second*time.Duration(c.Proxy.Cache.RedisTTL))
+			if status.Err() != nil {
+				util.Error(str.CCache, str.ECacheSet, key, status.Err())
+			}
+		}()
+	}
 	err := c.internal.Set(key, tile)
 	if err != nil {
 		util.Error(str.CCache, str.ECacheSet, key, err.Error())
 	}
+}
+
+// Invalidate a tile by key from all cache levels
+func (c *Cache) Invalidate(key string) error {
+	err := c.internal.Delete(key)
+	if err != nil && err != bigcache.ErrEntryNotFound {
+		return err
+	}
+
+	status := c.external.Del(context.Background(), key)
+	if status.Err() != nil {
+		return status.Err()
+	}
+
+	return nil
 }
 
 // Flush the internal bigcache instance
