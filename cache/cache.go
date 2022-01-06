@@ -115,6 +115,11 @@ func (c *Cache) Fetch(key string) *TilePacket {
 			util.Error(str.CCache, str.ECacheFetch, key, err.Error())
 			return nil
 		}
+
+		// extend Redis TTL when we fetch a tile to prevent key expiry for tiles
+		// that are fetched periodically
+		go c.external.Expire(context.Background(), key,
+			time.Second*time.Duration(c.Proxy.Cache.RedisTTL))
 	}
 
 	if cachedTile == nil {
