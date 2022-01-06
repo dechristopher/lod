@@ -260,7 +260,7 @@ func validateParams(proxy Proxy) error {
 
 	if len(proxy.Params) == 1 {
 		if proxy.Params[0].Name == "" {
-			return errors.New(fmt.Sprintf("proxy param must have a name defined"))
+			return errors.New("proxy param must have a name defined")
 		}
 		return nil
 	}

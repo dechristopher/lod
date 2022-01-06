@@ -38,6 +38,7 @@ const (
 	EBadRequest         = "failed to fetch URL parameters, error=%s"
 	ECacheCreate        = "failed to create internal cache, error=%s"
 	ECacheName          = "failed to create cache, no proxy configured, name=%s"
+	ECacheBuildKey      = "failed to build cache key err=%s"
 	ECacheEmptyTile     = "empty tile in call to tile packet encode, tile=%s"
 	ECacheFetch         = "failed to fetch tile from cache, key=%s error=%s"
 	ECacheDelete        = "failed to delete tile from cache, key=%s error=%s"

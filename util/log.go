@@ -46,7 +46,7 @@ func Error(caller, message string, args ...interface{}) {
 // Standard in developer mode and JSON in deploy mode
 func printLog(severity, format, caller, message string, args ...interface{}) {
 	if env.GetEnv() == env.Dev {
-		log.Printf(format, fmt.Sprintf("%s", caller), fmt.Sprintf(message, args...))
+		log.Printf(format, caller, fmt.Sprintf(message, args...))
 	} else {
 		logMessage := LogMessage{
 			Time:     MilliTime(),

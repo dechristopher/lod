@@ -57,7 +57,7 @@ func Serve() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	go func() {
-		_ = <-c
+		<-c
 		util.Info(str.CMain, str.MShutdown)
 		_ = r.Shutdown()
 	}()

@@ -11,7 +11,7 @@ import (
 
 // Encode tile data and metadata into a TilePacket
 func (c *Cache) Encode(cacheKey string, tile []byte, headers map[string]string) TilePacket {
-	if tile == nil || len(tile) == 0 {
+	if len(tile) == 0 {
 		util.Error(str.CCache, str.ECacheEmptyTile,
 			fmt.Sprintf("%s/%s", c.Proxy.Name, cacheKey))
 		return nil
@@ -22,17 +22,16 @@ func (c *Cache) Encode(cacheKey string, tile []byte, headers map[string]string) 
 
 	// insert empty checksum for later, prevents us from appending the whole
 	// packet to the computed checksum when we can just set the bytes
-	checksum := make([]byte, sha256.Size, sha256.Size)
+	checksum := make([]byte, sha256.Size)
 	packet = append(packet, checksum...)
 
-	tileDataSize := make([]byte, 4, 4)
+	tileDataSize := make([]byte, 4)
 	binary.LittleEndian.PutUint32(tileDataSize, uint32(len(tile)))
 
 	// add tile data size (uint32) after empty checksum
 	packet = append(packet, tileDataSize...)
 
-	var headerCount uint8
-	headerCount = uint8(len(headers))
+	headerCount := uint8(len(headers))
 
 	// add header count after tile data length
 	packet = append(packet, headerCount)

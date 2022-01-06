@@ -78,10 +78,11 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 				failed++
 			}
 		}
-	} else {
-		// fetch and prime in place for the given tile to avoid invalidating tiles
-		// en masse and having missing tiles in the cache during the prime
 	}
+	//else {
+	// fetch and prime in place for the given tile to avoid invalidating tiles
+	// en masse and having missing tiles in the cache during the prime
+	//}
 
 	util.Info(str.CAdmin, payload.InfoMessage, tile.String(), maxZoom, len(tiles))
 	ctx.Status(200)

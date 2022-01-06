@@ -77,6 +77,11 @@ func handler(p config.Proxy) fiber.Handler {
 
 		// calculate the cache key for this request using XYZ and URL params
 		cacheKey, err := helpers.BuildCacheKey(p, ctx)
+		if err != nil {
+			ctx.Locals("lod-cache", "  :err")
+			util.Error(str.CProxy, str.ECacheBuildKey, err.Error())
+			return ctx.SendStatus(fiber.StatusInternalServerError)
+		}
 
 		if cachedTile := cache.Get(p.Name).Fetch(cacheKey); cachedTile != nil {
 			// IF WE HIT A CACHED TILE
