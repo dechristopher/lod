@@ -9,20 +9,17 @@ on:
 jobs:
 
   build-lod-ubuntu-latest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - uses: actions/checkout@v2
 
-    - name: Set up Go
+    - name: Set up Go 1.17
       uses: actions/setup-go@v2
       with:
         go-version: 1.17
 
     - name: Install GEOS
       run: sudo apt update && sudo apt -y install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
-
-    - name: Build
-      run: go build -v ./...
 
     - name: Build
       run: go build -v ./...
