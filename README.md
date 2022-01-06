@@ -64,7 +64,7 @@ library by [allegro](https://github.com/allegro).
 
 - [ ] Multi-level caching
     - [X] In-memory, tunable LRU cache as first level
-    - [ ] Redis cluster with configurable TTL as second level
+    - [X] Redis cluster with configurable TTL as second level
 - [X] Configurable header proxying and deletion
   - [X] `Content-Type` and `Content-Encoding` added by default
 - [ ] Internal stats tracking
