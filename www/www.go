@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
@@ -24,13 +25,14 @@ func Serve() {
 		WriteTimeout:          time.Second * 30,
 		IdleTimeout:           time.Hour,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
-			util.Error(str.CMain, str.ERequest, ctx.Body(), err.Error())
+			util.Error(str.CMain, str.ERequest, ctx.String(), err.Error())
 
 			// send JSON error output if in dev mode
 			if env.IsDev() {
 				ctx.Status(500)
 				return ctx.JSON(map[string]string{
-					"error": err.Error(),
+					"status": "internal error",
+					"error":  err.Error(),
 				})
 			}
 
@@ -38,6 +40,14 @@ func Serve() {
 			return ctx.SendStatus(500)
 		},
 	})
+
+	// STDOUT request logger
+	r.Use(logger.New(logger.Config{
+		TimeZone:   "local",
+		TimeFormat: "2006-01-02T15:04:05-0700",
+		Format:     logFormat(),
+		Output:     os.Stdout,
+	}))
 
 	// wire up all route handlers
 	handlers.Wire(r)
@@ -64,3 +74,19 @@ func Serve() {
 	util.Info(str.CMain, str.MExit)
 	os.Exit(0)
 }
+
+// logFormat returns the HTTP log format for the
+// configured fiber logger middleware
+func logFormat() string {
+	if env.IsProd() {
+		return logFormatProd
+	}
+	return logFormatDev
+}
+
+const logFormatProd = "${ip} ${header:x-forwarded-for} ${header:x-real-ip} " +
+	"[${time}] ${pid} ${locals:requestid}${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
+	"${status} ${latency} ${bytesSent}b \"${referrer}\" \"${ua}\"\n"
+
+const logFormatDev = "${ip} [${time}]${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
+	"${status} ${latency} ${bytesSent}b\n"
