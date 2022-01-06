@@ -31,21 +31,25 @@ const (
 
 // (E) Error messages
 const (
-	ELogFail        = "failed to log, error=%s msg=%+v"
-	EConfig         = "failed to read config file, error=%s"
-	EConfigNotFound = "config file not found at path: '%s'"
-	EConfigPort     = "port override in env is invalid, env=%s err=%s"
-	EBadRequest     = "failed to fetch URL parameters, error=%s"
-	ECacheCreate    = "failed to create internal cache, error=%s"
-	ECacheName      = "failed to create cache, no proxy configured, name=%s"
-	ECacheEmptyTile = "empty tile in call to tile packet encode, tile=%s"
-	ECacheFetch     = "failed to fetch tile from cache, key=%s error=%s"
-	ECacheDelete    = "failed to delete tile from cache, key=%s error=%s"
-	ECacheSet       = "failed to set cache entry, key=%s error=%s"
-	ECacheFlush     = "failed to flush cache, name=%s error=%s"
-	EWrite          = "write err: error=%s meta=%+v"
-	EReload         = "failed to reload instance capabilities, error=%s"
-	ERequest        = "generic uncaught error in request chain, ctx=%s error=%s"
+	ELogFail            = "failed to log, error=%s msg=%+v"
+	EConfig             = "failed to read config file, error=%s"
+	EConfigNotFound     = "config file not found at path: '%s'"
+	EConfigPort         = "port override in env is invalid, env=%s err=%s"
+	EBadRequest         = "failed to fetch URL parameters, error=%s"
+	ECacheCreate        = "failed to create internal cache, error=%s"
+	ECacheName          = "failed to create cache, no proxy configured, name=%s"
+	ECacheEmptyTile     = "empty tile in call to tile packet encode, tile=%s"
+	ECacheFetch         = "failed to fetch tile from cache, key=%s error=%s"
+	ECacheDelete        = "failed to delete tile from cache, key=%s error=%s"
+	ECacheSet           = "failed to set cache entry, key=%s error=%s"
+	ECacheFlush         = "failed to flush cache, name=%s error=%s"
+	EInvalidateTileDeep = "failed to invalidate tile %s with depth error=%s"
+	EInvalidateTile     = "failed to invalidate tile %s error=%s"
+	EPrimeTileDeep      = "failed to prime tile %s with depth error=%s"
+	EPrimeTile          = "failed to prime tile %s error=%s"
+	EWrite              = "write err: error=%s meta=%+v"
+	EReload             = "failed to reload instance capabilities, error=%s"
+	ERequest            = "generic uncaught error in request chain, ctx=%s error=%s"
 )
 
 // (U) User-facing error messages and codes
@@ -53,21 +57,28 @@ const ()
 
 // (M) Standard info log messages
 const (
-	MDevMode  = "!! DEVELOPER MODE !!"
-	MInit     = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
-	MStarted  = "started in %s [env: %s][http: %d]"
-	MProxy    = "configured proxy [%s] -> %s"
-	MReload   = "reloaded instance capabilities"
-	MShutdown = "shutting down"
-	MExit     = "exit"
+	MDevMode            = "!! DEVELOPER MODE !!"
+	MInit               = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
+	MStarted            = "started in %s [env: %s][http: %d]"
+	MProxy              = "configured proxy [%s] -> %s"
+	MReload             = "reloaded instance capabilities"
+	MInvalidateTile     = "invalidated tile %s with no depth (%d) (%d tiles)"
+	MInvalidateTileDeep = "invalidated tile %s with depth %d (%d tiles)"
+	MPrimeTile          = "primed tile %s with no depth (%d) (%d tiles)"
+	MPrimeTileDeep      = "primed tile %s with depth %d (%d tiles)"
+	MShutdown           = "shutting down"
+	MExit               = "exit"
 )
 
 // (D) Debug log messages
 const (
-	DCacheSet  = "cache set key=%s len=%d"
-	DCacheMiss = "cache miss key=%s"
-	DCacheFail = "cache bad value key=%s"
-	DCacheHit  = "cache hit key=%s len=%d"
+	DCacheUp        = "cache online name=%s"
+	DCacheSet       = "cache set key=%s len=%d"
+	DCacheMiss      = "cache internal miss key=%s"
+	DCacheMissExt   = "cache external miss key=%s"
+	DCacheFail      = "cache bad value key=%s"
+	DCacheHit       = "cache hit key=%s len=%d"
+	DInvalidateFail = "failed to invalidate tile %s, err=%s"
 )
 
 // (T) Test messages
