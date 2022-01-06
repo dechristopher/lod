@@ -1,13 +1,14 @@
 name: release
 
 on:
-  tags: v*
+  tags:
+    - v*
   release:
-    types: [published]
+    types: 
+      - published
 
 jobs:
-
-  gen_version:
+  version:
     name: Set LOD version
     runs-on: ubuntu-20.04
 
