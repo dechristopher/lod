@@ -155,7 +155,7 @@ func (c *Cache) EncodeSet(key string, tileData []byte, headers map[string]string
 // Set the tile in all cache levels with the configured TTLs
 func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
 	util.DebugFlag("cache", str.CCache, str.DCacheSet, key, len(tile))
-	if len(internalOnly) == 0 || !internalOnly[0] && c.external != nil {
+	if (len(internalOnly) == 0 || !internalOnly[0]) && c.external != nil {
 		go func() {
 			status := c.external.Set(context.Background(), key, tile.Raw(),
 				time.Second*time.Duration(c.Proxy.Cache.RedisTTL))
