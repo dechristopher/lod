@@ -1,6 +1,7 @@
 name: release
 
 on:
+  tags: v*
   release:
     types: [published]
 
