@@ -111,6 +111,9 @@ del_headers = [ "X-Get-Rid-Of-Me" ]
 mem_cap = 5000    # max capacity of in-memory cache
 mem_ttl = 3600    # in-memory cache TTL in seconds
 redis_ttl = 86400 # redis tile cache TTL in seconds (or -1 for no TTL)
+redis_url = "redis://localhost:6379/0" # redis connection URL
+key_template = "{z}/{x}/{y}" # cache key template string, supports parameter names
+
 
 # Supports many configured proxy instances for caching multiple tileservers
 [[proxies]]
