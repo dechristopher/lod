@@ -13,7 +13,7 @@ import (
 func (c *Cache) Encode(cacheKey string, tile []byte, headers map[string]string) TilePacket {
 	if tile == nil || len(tile) == 0 {
 		util.Error(str.CCache, str.ECacheEmptyTile,
-			fmt.Sprintf("%s/%s", c.proxy.Name, cacheKey))
+			fmt.Sprintf("%s/%s", c.Proxy.Name, cacheKey))
 		return nil
 	}
 

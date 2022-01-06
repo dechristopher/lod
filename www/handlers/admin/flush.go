@@ -23,7 +23,7 @@ func Flush(ctx *fiber.Ctx) error {
 	for _, proxy := range config.Cap.Proxies {
 		if proxy.Name == name || name == "all" {
 			// flush the proxy's internal cache
-			err := cache.Caches.Get(name).Flush()
+			err := cache.Get(proxy.Name).Flush()
 
 			if err != nil {
 				util.Error(str.CAdmin, str.ECacheFlush, name, err.Error())
