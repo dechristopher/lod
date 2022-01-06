@@ -18,7 +18,7 @@ import (
 
 var (
 	// Version of LOD
-	Version = "Local"
+	Version = ".dev"
 
 	// Cap is a store for local instance Capabilities
 	Cap Capabilities
@@ -60,11 +60,11 @@ type Param struct {
 
 // Cache configuration for a Proxy instance
 type Cache struct {
-	MemCap int `json:"mem_cap" toml:"mem_cap"` // maximum number of tiles to store in the in-memory LRU cache
+	MemCap int `json:"mem_cap" toml:"mem_cap"` // maximum capacity in MB of the in-memory cache
 	MemTTL int `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL in seconds
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
-	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or -1 for no TTL)
+	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or 0 for no TTL)
 	// Example: redis://<user>:<password>@<host>:<port>/<db_number>
 	RedisURL    string `json:"-" toml:"redis_url"`               // full redis connection URL for parsing, SENSITIVE
 	KeyTemplate string `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
@@ -224,7 +224,7 @@ func validateCache(proxy Proxy) error {
 			"capacity proxy=%s", proxy.Name))
 	}
 
-	if proxy.Cache.MemTTL != -1 && proxy.Cache.MemTTL < 1 {
+	if proxy.Cache.MemTTL < 1 {
 		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
 			"memory TTL proxy=%s", proxy.Name))
 	}
