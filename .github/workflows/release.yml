@@ -65,7 +65,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: lod_linux_amd64
+          name: lod_linux_amd64_${VERSION}
           path: cmd/lod/lod.zip
 
       - name: Upload release asset
@@ -76,7 +76,7 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: cmd/lod/lod.zip
-          asset_name: lod_linux_amd64.zip
+          asset_name: lod_linux_amd64_${VERSION}.zip
           asset_content_type: application/zip
 
   build_macos:
@@ -121,7 +121,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: lod_darwin_amd64
+          name: lod_darwin_amd64_${VERSION}
           path: cmd/lod/lod.zip
 
       - name: Upload release asset
@@ -132,7 +132,7 @@ jobs:
         with:
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: cmd/lod/lod.zip
-          asset_name: lod_darwin_amd64.zip
+          asset_name: lod_darwin_amd64_${VERSION}.zip
           asset_content_type: application/zip
 
   build_docker:
@@ -158,12 +158,12 @@ jobs:
       - name: Build and tag Docker container
         run: |
           docker build -t lod --build-arg VERSION=${VERSION} .
-          docker tag lod:latest ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-          docker tag lod:latest ${GHCR_ORG}/${GHCR_REPO}:latest
+          docker tag lod:latest ghcr.io/${GHCR_ORG}/${GHCR_REPO}:${VERSION}
+          docker tag lod:latest ghcr.io/${GHCR_ORG}/${GHCR_REPO}:latest
 
       - name: Publish Docker container
         if: github.event_name == 'release'
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-          docker push ${GHCR_ORG}/${GHCR_REPO}:latest
+          docker push ghcr.io/${GHCR_ORG}/${GHCR_REPO}:${VERSION}
+          docker push ghcr.io/${GHCR_ORG}/${GHCR_REPO}:latest
