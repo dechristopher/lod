@@ -17,13 +17,18 @@ jobs:
     - name: Install GEOS
       run: sudo apt update && sudo apt -y install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
 
-    - name: Lint code
-      run: |
-        gofiles=$(find ./ -name '*.go' -not -path "vendor/*") && [ -z "$gofiles" ] || unformatted=$(goimports -l $gofiles) && [ -z "$unformatted" ] || (echo >&2 "Go files must be formatted with gofmt. Following files has problem: $unformatted" &&  true);
-        diff <(echo -n) <(gofmt -s -d .)
-        export PATH=$PATH:$(go env GOPATH)/bin # temporary fix. See https://github.com/actions/setup-go/issues/14
-        go get -u golang.org/x/lint/golint
-        golint ./...
+#    - name: Lint code
+#      run: |
+#        gofiles=$(find ./ -name '*.go' -not -path "vendor/*") && [ -z "$gofiles" ] || unformatted=$(goimports -l $gofiles) && [ -z "$unformatted" ] || (echo >&2 "Go files must be formatted with gofmt. Following files has problem: $unformatted" &&  true);
+#        diff <(echo -n) <(gofmt -s -d .)
+#        export PATH=$PATH:$(go env GOPATH)/bin # temporary fix. See https://github.com/actions/setup-go/issues/14
+#        go get -u golang.org/x/lint/golint
+#        golint ./...
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v2
+      with:
+        # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+        version: latest
 
     - name: Test
       run: go test -v ./... -race -coverprofile=coverage.txt -covermode=atomic
