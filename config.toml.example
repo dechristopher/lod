@@ -12,6 +12,6 @@ add_headers = [ "X-We-Want-This", "X-This-One-Too" ]
 del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
-mem_cap = 5000
+mem_cap = 100
 mem_ttl = 3600
 redis_ttl = 86400
