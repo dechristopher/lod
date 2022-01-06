@@ -1,0 +1,85 @@
+linters:
+  enable:
+  - asciicheck
+  - bodyclose
+  - deadcode
+  - depguard
+  - dogsled
+  - dupl
+  - durationcheck
+  - errcheck
+  - errorlint
+  - exhaustive
+  - exportloopref
+  - forbidigo
+  - forcetypeassert
+  - goconst
+  - gocritic
+  - godot
+  - goerr113
+  - gofmt
+  - goimports
+  - gomodguard
+  - goprintffuncname
+  - gosec
+  - gosimple
+  - govet
+  - importas
+  - ineffassign
+  - misspell
+  - nakedret
+  - nilerr
+  - noctx
+  - prealloc
+  - rowserrcheck
+  - sqlclosecheck
+  - staticcheck
+  - structcheck
+  - stylecheck
+  - thelper
+  - typecheck
+  - unconvert
+  - unparam
+  - unused
+  - varcheck
+  - wastedassign
+  - whitespace
+  disable:
+  - cyclop
+  - exhaustivestruct
+  - funlen
+  - gci
+  - gochecknoglobals
+  - gochecknoinits
+  - gocognit
+  - gocyclo
+  - godox
+  - gofumpt
+  - goheader
+  - gomnd
+  - gomoddirectives
+  - ifshort
+  - lll
+  - makezero
+  - maligned
+  - nestif
+  - nlreturn
+  - nolintlint
+  - paralleltest
+  - predeclared
+  - revive
+  - scopelint
+  - testpackage
+  - tparallel
+  - wrapcheck
+  - wsl
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/twpayne/go-geos
+
+issues:
+  exclude-rules:
+  - linters:
+    - goerr113
+    text: "do not define dynamic errors, use wrapped static errors instead"
