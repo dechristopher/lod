@@ -23,7 +23,7 @@ jobs:
           path: ${{ github.workspace }}/version.txt
 
   build_linux:
-    name: Build for Linux
+    name: Build LOD for Linux
     needs: gen_version
     runs-on: ubuntu-20.04
 
@@ -60,13 +60,13 @@ jobs:
       - name: Zip archive permissions workaround
         run: |
           cd cmd/lod
-          zip -9 -D lod_linux_amd64_${VERSION}.zip lod
+          zip -9 -D lod_linux_amd64_${{ env.VERSION }}.zip lod
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
           name: lod_linux_amd64_${VERSION}
-          path: cmd/lod/lod_linux_amd64_${VERSION}.zip
+          path: cmd/lod/lod_linux_amd64_${{ env.VERSION }}.zip
 
       - name: Upload release asset
         if: github.event_name == 'release'
@@ -75,8 +75,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: cmd/lod/lod_linux_amd64_${VERSION}.zip
-          asset_name: lod_linux_amd64_${VERSION}.zip
+          asset_path: cmd/lod/lod_linux_amd64_${{ env.VERSION }}.zip
+          asset_name: lod_linux_amd64_${{ env.VERSION }}.zip
           asset_content_type: application/zip
 
   build_macos:
@@ -116,17 +116,17 @@ jobs:
       - name: Zip archive permissions workaround
         run: |
           cd cmd/lod
-          zip -9 -D lod_darwin_amd64_${VERSION}.zip lod
+          zip -9 -D lod_darwin_amd64_${{ env.VERSION }}.zip lod
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v2
         with:
           name: lod_darwin_amd64_${VERSION}
-          path: cmd/lod/lod_darwin_amd64_${VERSION}.zip
+          path: cmd/lod/lod_darwin_amd64_${{ env.VERSION }}.zip
 
       - uses: AButler/upload-release-assets@v2.0
         with:
-          files: cmd/lod/lod_darwin_amd64_${VERSION}.zip
+          files: cmd/lod/lod_darwin_amd64_${{ env.VERSION }}.zip
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
 #      - name: Upload release asset
@@ -145,8 +145,8 @@ jobs:
     needs: gen_version
     runs-on: ubuntu-20.04
     env:
-      GHCR_ORG: ghcr.io/tile-fund
-      GHCR_REPO: lod
+      DH_ORG: tilefund
+      DH_REPO: lod
 
     steps:
       - name: Check out code
@@ -162,13 +162,16 @@ jobs:
 
       - name: Build and tag Docker container
         run: |
-          docker build -t ${GHCR_ORG}/${GHCR_REPO} --build-arg VERSION=${VERSION} .
-          docker tag ${GHCR_ORG}/${GHCR_REPO}:latest ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-          docker tag ${GHCR_ORG}/${GHCR_REPO}:latest ${GHCR_ORG}/${GHCR_REPO}:latest
+          docker build -t lod --build-arg VERSION=${VERSION} .
+          docker tag lod:latest ${DH_ORG}/${DH_REPO}:${VERSION}
+          docker tag lod:latest ${DH_ORG}/${DH_REPO}:latest
 
       - name: Publish Docker container
         if: github.event_name == 'release'
+        env:
+          DH_USER: ${{ secrets.DH_USER }}
+          DH_PASSWORD: ${{ secrets.DH_PASSWORD }}
         run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker push ${GHCR_ORG}/${GHCR_REPO}:${VERSION}
-          docker push ${GHCR_ORG}/${GHCR_REPO}:latest
+          echo ${DH_PASSWORD} | docker login -u ${DH_USER} --password-stdin
+          docker push ${DH_ORG}/${DH_REPO}:${VERSION}
+          docker push ${DH_ORG}/${DH_REPO}:latest
