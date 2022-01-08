@@ -3,7 +3,6 @@ package cache
 import (
 	"context"
 	"sync"
-	"time"
 
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-redis/redis/v8"
@@ -46,7 +45,7 @@ func Get(name string) *Cache {
 		// find and populate a new cache instance for the given name
 		for _, proxy := range config.Cap.Proxies {
 			if proxy.Name == name {
-				conf := bigcache.DefaultConfig(time.Duration(proxy.Cache.MemTTL) * time.Second)
+				conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
 				conf.StatsEnabled = !env.IsProd()
 				conf.MaxEntrySize = 1024 * 10 // 100KB
 				conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
@@ -124,10 +123,11 @@ func (c *Cache) Fetch(key string) *TilePacket {
 			return nil
 		}
 
-		// extend Redis TTL when we fetch a tile to prevent key expiry for tiles
-		// that are fetched periodically
-		go c.external.Expire(context.Background(), key,
-			time.Second*time.Duration(c.Proxy.Cache.RedisTTL))
+		// if TTL set, extend Redis TTL when we fetch a tile to prevent
+		// key expiry for tiles that are fetched periodically
+		if c.Proxy.Cache.RedisTTLDuration > 0 {
+			go c.external.Expire(context.Background(), key, c.Proxy.Cache.RedisTTLDuration)
+		}
 	}
 
 	if cachedTile == nil {
@@ -171,8 +171,8 @@ func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
 	util.DebugFlag("cache", str.CCache, str.DCacheSet, key, len(tile))
 	if (len(internalOnly) == 0 || !internalOnly[0]) && c.external != nil {
 		go func() {
-			status := c.external.Set(context.Background(), key, tile.Raw(),
-				time.Second*time.Duration(c.Proxy.Cache.RedisTTL))
+			status := c.external.Set(context.Background(), key,
+				tile.Raw(), c.Proxy.Cache.RedisTTLDuration)
 			if status.Err() != nil {
 				util.Error(str.CCache, str.ECacheSet, key, status.Err())
 			}

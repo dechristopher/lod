@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/gofiber/fiber/v2"
@@ -59,12 +60,17 @@ type Param struct {
 }
 
 // Cache configuration for a Proxy instance
+// Cache TTLs are set using Go's built-in time.ParseDuration
+// Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+// For example: 1h, 300s, 1000ms, 2h35m, etc.
 type Cache struct {
-	MemCap int `json:"mem_cap" toml:"mem_cap"` // maximum capacity in MB of the in-memory cache
-	MemTTL int `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL in seconds
+	MemCap         int           `json:"mem_cap" toml:"mem_cap"` // maximum capacity in MB of the in-memory cache
+	MemTTL         string        `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL, ex: 1h, 30s, 1000ms, etc
+	MemTTLDuration time.Duration `json:"-" toml:"-"`             // parsed duration from MemTTL
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
-	RedisTTL int `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL in seconds (or 0 for no TTL)
+	RedisTTL         string        `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL, ex: 1h, 30s, 1000ms, etc
+	RedisTTLDuration time.Duration `json:"-" toml:"-"`                 // parsed duration from RedisTTL
 	// Example: redis://<user>:<password>@<host>:<port>/<db_number>
 	RedisURL    string `json:"-" toml:"redis_url"`               // full redis connection URL for parsing, SENSITIVE
 	KeyTemplate string `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
@@ -72,14 +78,14 @@ type Cache struct {
 
 var defaultCache = Cache{
 	MemCap:      1000,
-	MemTTL:      86400,
+	MemTTL:      "24h",
 	KeyTemplate: "{z}/{x}/{y}",
 }
 
 var zeroCache = Cache{
 	MemCap:      0,
-	MemTTL:      0,
-	RedisTTL:    0,
+	MemTTL:      "",
+	RedisTTL:    "",
 	RedisURL:    "",
 	KeyTemplate: "",
 }
@@ -119,18 +125,18 @@ func Read() error {
 	Cap.Version = Version
 
 	// validate configuration
-	return validate(Cap)
+	return validate(&Cap)
 }
 
 // validate instance Capabilities for sanity and errors
-func validate(c Capabilities) error {
+func validate(c *Capabilities) error {
 	if c.Instance.Port == 0 {
 		return errors.New(fmt.Sprintf("invalid port provided port=%d", c.Instance.Port))
 	}
 
 	// validate each provided proxy endpoint configuration
-	for num, proxy := range c.Proxies {
-		if err := validateProxy(num, proxy); err != nil {
+	for num := range c.Proxies {
+		if err := validateProxy(num, &c.Proxies[num]); err != nil {
 			return err
 		}
 	}
@@ -174,7 +180,7 @@ func (p *Proxy) DeleteHeaders(c *fiber.Ctx) {
 }
 
 // validateProxy will validate an individual proxy endpoint in the configuration
-func validateProxy(num int, proxy Proxy) error {
+func validateProxy(num int, proxy *Proxy) error {
 	if proxy.Name == "" {
 		return errors.New(fmt.Sprintf("configured proxy #%d cannot have an empty name", num))
 	}
@@ -218,21 +224,29 @@ func validateProxy(num int, proxy Proxy) error {
 }
 
 // validateCache will validate a proxy endpoint's cache configuration
-func validateCache(proxy Proxy) error {
+func validateCache(proxy *Proxy) error {
 	if proxy.Cache.MemCap < 1 {
 		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
 			"capacity proxy=%s", proxy.Name))
 	}
 
-	if proxy.Cache.MemTTL < 1 {
-		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
-			"memory TTL proxy=%s", proxy.Name))
+	memTTL, err := time.ParseDuration(proxy.Cache.MemTTL)
+	if err != nil {
+		return errors.New(fmt.Sprintf("invalid memory TTL specified proxy=%s ttl=%s, "+
+			"valid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".",
+			proxy.Name, proxy.Cache.MemTTL))
 	}
 
-	if proxy.Cache.RedisTTL < 0 {
-		return errors.New(fmt.Sprintf("proxy cache cannot have negative "+
-			"redis TTL proxy=%s", proxy.Name))
+	proxy.Cache.MemTTLDuration = memTTL
+
+	redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
+	if err != nil {
+		return errors.New(fmt.Sprintf("invalid redis TTL specified proxy=%s ttl=%s, "+
+			"valid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".",
+			proxy.Name, proxy.Cache.RedisTTL))
 	}
+
+	proxy.Cache.RedisTTLDuration = redisTTL
 
 	if !strings.Contains(proxy.Cache.KeyTemplate, "{z}") {
 		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
@@ -253,7 +267,7 @@ func validateCache(proxy Proxy) error {
 }
 
 // validateParams ensures configured params don't have valid and non-overlapping names
-func validateParams(proxy Proxy) error {
+func validateParams(proxy *Proxy) error {
 	if len(proxy.Params) == 0 {
 		return nil
 	}
