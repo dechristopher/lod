@@ -92,7 +92,7 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
 
 ## v1.0 Feature Roadmap
 
-- [ ] Multi-level caching
+- [X] Multi-level caching
     - [X] In-memory, tunable LRU cache as first level
     - [X] Redis cluster with configurable TTL as second level
 - [X] Configurable header proxying and deletion
@@ -139,8 +139,11 @@ del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
 mem_cap = 100    # maximum capacity in MB of the in-memory cache
-mem_ttl = 3600    # in-memory cache TTL in seconds
-redis_ttl = 86400 # redis tile cache TTL in seconds (or 0 for no TTL)
+# Cache TTLs are set using Go's built-in time.ParseDuration
+# Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+# For example: 1h, 5m, 300s, 1000ms, 2h35m, etc.
+mem_ttl = "1h" # in-memory cache TTL
+redis_ttl = "24h" # redis tile cache TTL, or "0" for no expiry
 redis_url = "redis://localhost:6379/0" # redis connection URL
 key_template = "{z}/{x}/{y}" # cache key template string, supports parameter names
 
