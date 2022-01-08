@@ -13,5 +13,6 @@ del_headers = [ "X-Get-Rid-Of-Me" ]
 
 [proxies.cache]
 mem_cap = 100
-mem_ttl = 3600
-redis_ttl = 86400
+mem_ttl = "1h"
+redis_ttl = "24h"
+redis_url = "redis://localhost:6379/0"
