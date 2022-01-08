@@ -11,7 +11,6 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gofiber/fiber/v2"
-	"github.com/pkg/errors"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
@@ -130,8 +129,8 @@ func Read() error {
 
 // validate instance Capabilities for sanity and errors
 func validate(c *Capabilities) error {
-	if c.Instance.Port == 0 {
-		return errors.New(fmt.Sprintf("invalid port provided port=%d", c.Instance.Port))
+	if c.Instance.Port < 1 || c.Instance.Port > 65535 {
+		return ErrInvalidPort{Port: c.Instance.Port}
 	}
 
 	// validate each provided proxy endpoint configuration
@@ -182,32 +181,46 @@ func (p *Proxy) DeleteHeaders(c *fiber.Ctx) {
 // validateProxy will validate an individual proxy endpoint in the configuration
 func validateProxy(num int, proxy *Proxy) error {
 	if proxy.Name == "" {
-		return errors.New(fmt.Sprintf("configured proxy #%d cannot have an empty name", num))
+		return ErrProxyNoName{Number: num + 1}
 	}
 
 	matched, err := regexp.Match("^[a-zA-Z0-9_]+$", []byte(proxy.Name))
 	if err != nil {
-		return errors.Wrapf(err, "configured proxy name error name=%s", proxy.Name)
+		return ErrProxyName{
+			Number: num + 1,
+			Err:    err,
+		}
 	}
 
 	if !matched {
-		return errors.New(fmt.Sprintf("proxy name may only "+
-			"contain alphanumerics and underscores name=%s", proxy.Name))
+		return ErrProxyInvalidName{
+			Number:    num + 1,
+			ProxyName: proxy.Name,
+		}
 	}
 
 	if !strings.Contains(proxy.TileURL, "{z}") {
-		return errors.New(fmt.Sprintf("proxy tile endpoint URL does not contain "+
-			"{z} placeholder proxy=%s url=%s", proxy.Name, proxy.TileURL))
+		return ErrMissingTileURLTemplate{
+			ProxyName: proxy.Name,
+			TileURL:   proxy.TileURL,
+			Parameter: "{z}",
+		}
 	}
 
 	if !strings.Contains(proxy.TileURL, "{x}") {
-		return errors.New(fmt.Sprintf("proxy tile endpoint URL does not contain "+
-			"{x} placeholder proxy=%s url=%s", proxy.Name, proxy.TileURL))
+		return ErrMissingTileURLTemplate{
+			ProxyName: proxy.Name,
+			TileURL:   proxy.TileURL,
+			Parameter: "{x}",
+		}
 	}
 
 	if !strings.Contains(proxy.TileURL, "{y}") {
-		return errors.New(fmt.Sprintf("proxy tile endpoint URL does not contain "+
-			"{y} placeholder proxy=%s url=%s", proxy.Name, proxy.TileURL))
+		return ErrMissingTileURLTemplate{
+			ProxyName: proxy.Name,
+			TileURL:   proxy.TileURL,
+			Parameter: "{y}",
+		}
 	}
 
 	// validate the proxy's parameter configurations
@@ -226,41 +239,51 @@ func validateProxy(num int, proxy *Proxy) error {
 // validateCache will validate a proxy endpoint's cache configuration
 func validateCache(proxy *Proxy) error {
 	if proxy.Cache.MemCap < 1 {
-		return errors.New(fmt.Sprintf("proxy cache cannot have zero or negative "+
-			"capacity proxy=%s", proxy.Name))
+		return ErrInvalidMemCap{ProxyName: proxy.Name}
 	}
 
 	memTTL, err := time.ParseDuration(proxy.Cache.MemTTL)
 	if err != nil {
-		return errors.New(fmt.Sprintf("invalid memory TTL specified proxy=%s ttl=%s, "+
-			"valid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".",
-			proxy.Name, proxy.Cache.MemTTL))
+		return ErrInvalidMemTTL{
+			ProxyName: proxy.Name,
+			TTL:       proxy.Cache.MemTTL,
+		}
 	}
 
 	proxy.Cache.MemTTLDuration = memTTL
 
 	redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
 	if err != nil {
-		return errors.New(fmt.Sprintf("invalid redis TTL specified proxy=%s ttl=%s, "+
-			"valid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".",
-			proxy.Name, proxy.Cache.RedisTTL))
+		return ErrInvalidRedisTTL{
+			ProxyName: proxy.Name,
+			TTL:       proxy.Cache.MemTTL,
+		}
 	}
 
 	proxy.Cache.RedisTTLDuration = redisTTL
 
 	if !strings.Contains(proxy.Cache.KeyTemplate, "{z}") {
-		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
-			"{z} placeholder proxy=%s template=%s", proxy.Name, proxy.Cache.KeyTemplate))
+		return ErrMissingCacheTemplate{
+			ProxyName: proxy.Name,
+			Template:  proxy.Cache.KeyTemplate,
+			Parameter: "{z}",
+		}
 	}
 
 	if !strings.Contains(proxy.Cache.KeyTemplate, "{x}") {
-		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
-			"{x} placeholder proxy=%s template=%s", proxy.Name, proxy.Cache.KeyTemplate))
+		return ErrMissingCacheTemplate{
+			ProxyName: proxy.Name,
+			Template:  proxy.Cache.KeyTemplate,
+			Parameter: "{x}",
+		}
 	}
 
 	if !strings.Contains(proxy.Cache.KeyTemplate, "{y}") {
-		return errors.New(fmt.Sprintf("proxy cache key template does not contain "+
-			"{y} placeholder proxy=%s template=%s", proxy.Name, proxy.Cache.KeyTemplate))
+		return ErrMissingCacheTemplate{
+			ProxyName: proxy.Name,
+			Template:  proxy.Cache.KeyTemplate,
+			Parameter: "{y}",
+		}
 	}
 
 	return nil
@@ -272,19 +295,14 @@ func validateParams(proxy *Proxy) error {
 		return nil
 	}
 
-	if len(proxy.Params) == 1 {
-		if proxy.Params[0].Name == "" {
-			return errors.New("proxy param must have a name defined")
-		}
-		return nil
-	}
-
 	var usedNames []string
 
 	for i, param := range proxy.Params {
-		if proxy.Params[0].Name == "" {
-			return errors.New(fmt.Sprintf("proxy param must have a name defined for param #%d in proxy=%s",
-				i+1, proxy.Name))
+		if param.Name == "" {
+			return ErrParamNoName{
+				ProxyName: proxy.Name,
+				Number:    i + 1,
+			}
 		}
 
 		for _, name := range usedNames {
