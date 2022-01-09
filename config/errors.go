@@ -2,6 +2,22 @@ package config
 
 import "fmt"
 
+// ErrConfigGetHTTP is an error struct for invalid instance
+// port, caught during the instance validation phase
+type ErrConfigGetHTTP struct {
+	URL    string
+	Status int
+	Err    error
+}
+
+// Error returns the string representation of ErrConfigGetHTTP
+func (e ErrConfigGetHTTP) Error() string {
+	if e.Status != 0 {
+		return fmt.Sprintf("config: failed to fetch config from URL '%s', got status %d", e.URL, e.Status)
+	}
+	return fmt.Sprintf("config: failed to fetch config from URL '%s', got error %s", e.URL, e.Err.Error())
+}
+
 // ErrInvalidPort is an error struct for invalid instance
 // port, caught during the instance validation phase
 type ErrInvalidPort struct {

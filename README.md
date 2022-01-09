@@ -59,7 +59,7 @@ LOD's more advanced cache invalidation and priming functionality.**
 
 ```bash
 Flags:
-  --conf  Path to TOML configuration file. Default: config.toml
+  --conf  Path/URL to TOML configuration file. Default: config.toml
   --dev   Whether to enable developer mode. Default: false
   --debug Optional comma separated debug flags. Ex: foo,bar,baz
   --help  Shows this help menu.

@@ -1,6 +1,16 @@
 package util
 
-import "time"
+import (
+	"net/url"
+	"time"
+)
+
+// IsUrl returns true if the provided string is a valid URL with
+// scheme and host set properly
+func IsUrl(str string) bool {
+	u, err := url.Parse(str)
+	return err == nil && u.Scheme != "" && u.Host != ""
+}
 
 // MilliTime returns the current millisecond time
 func MilliTime() int64 {

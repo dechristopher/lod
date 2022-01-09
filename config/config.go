@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"regexp"
 	"strconv"
@@ -93,11 +94,42 @@ var zeroCache = Cache{
 
 // Read config file into Capabilities
 func Read() error {
-	configData, err := ioutil.ReadFile(*File)
-	if err != nil {
-		return err
+	var configData []byte
+	var err error
+
+	if util.IsUrl(*File) {
+		// fetch config from URL if valid
+		resp, err := http.Get(*File)
+		if err != nil {
+			return ErrConfigGetHTTP{
+				URL: *File,
+				Err: err,
+			}
+		}
+
+		if resp.StatusCode != 200 {
+			return ErrConfigGetHTTP{
+				URL:    *File,
+				Status: resp.StatusCode,
+			}
+		}
+
+		configData, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return ErrConfigGetHTTP{
+				URL: *File,
+				Err: err,
+			}
+		}
+	} else {
+		// read config file from disk if not provided as a URL
+		configData, err = ioutil.ReadFile(*File)
+		if err != nil {
+			return err
+		}
 	}
 
+	// decode config file as TOML
 	if _, err = toml.Decode(string(configData), &Cap); err != nil {
 		return err
 	}

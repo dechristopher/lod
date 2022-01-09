@@ -3,7 +3,7 @@ package str
 // Flags, log formats and miscellaneous strings
 const (
 	FConfigFile      = "conf"
-	FConfigFileUsage = "Path to TOML configuration file. Default: config.toml"
+	FConfigFileUsage = "Path/URL to TOML configuration file. Default: config.toml"
 
 	FDevMode      = "dev"
 	FDevModeUsage = "Whether to enable developer mode. Default: false"
@@ -94,7 +94,7 @@ const (
 // Help message
 const Help = `
 Flags:
-  --conf  Path to TOML configuration file. Default: config.toml
+  --conf  Path/URL to TOML configuration file. Default: config.toml
   --dev   Whether to enable developer mode. Default: false
   --debug Optional comma separated debug flags. Ex: foo,bar,baz
   --help  Shows this help menu.
