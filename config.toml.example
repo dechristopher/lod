@@ -2,17 +2,34 @@
 
 [instance]
 port = 1337
+admin_token = "GHglvODhAjIr9qyrchv2DPrKHRo1D7eN"
 
 [[proxies]]
-name = "osm"
-tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf"
-cors_origins = "https://example.com"
-access_token = "MyTilesArePrivate"
-add_headers = [ "X-We-Want-This", "X-This-One-Too" ]
-del_headers = [ "X-Get-Rid-Of-Me" ]
+name = "basemap"
+tile_url = "http://tegola.example.com:8080/maps/basemap/{z}/{x}/{y}.pbf"
+cors_origins = "*"
+del_headers = ["Tegola-Cache"]
+
+[[proxies.params]]
+name = "lid"
+default = "0"
 
 [proxies.cache]
-mem_cap = 100
-mem_ttl = "1h"
-redis_ttl = "24h"
+mem_cap = 200
+mem_ttl = "2h"
+redis_ttl = "48h"
 redis_url = "redis://localhost:6379/0"
+key_template = "basemap:{lid}:{z}:{x}:{y}"
+
+[[proxies]]
+name = "tornadoes"
+tile_url = "http://tegola.example.com:8080/maps/tornadoes/{z}/{x}/{y}.pbf"
+cors_origins = "*"
+del_headers = ["Tegola-Cache"]
+
+[proxies.cache]
+mem_cap = 200
+mem_ttl = "1h"
+redis_ttl = "48h"
+redis_url = "redis://localhost:6379/0"
+key_template = "tornadoes:{z}:{x}:{y}"

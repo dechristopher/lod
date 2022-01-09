@@ -54,6 +54,9 @@ Download a build from the releases page or just run:
 $ go install github.com/tile-fund/lod@latest
 ```
 
+**NOTE: You'll need the GEOS library installed on your system to use some of
+LOD's more advanced cache invalidation and priming functionality.**
+
 ```bash
 Flags:
   --conf  Path to TOML configuration file. Default: config.toml
@@ -66,7 +69,8 @@ Usage:
 
 Or just use our Docker image!
 
-You can create your own Dockerfile that adds a `config.toml` from the context into the config directory, like so:
+You can create your own Dockerfile that adds a `config.toml` from the context
+into the config directory, like so:
 ```Dockerfile
 FROM tilefund/lod:0.4.6
 COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
@@ -109,6 +113,7 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
     - [X] Add to cache key for separate caching (osm/4/5/6/osm_id=19)
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
+  - [X] Security via Bearer Token Authorization
   - [X] Reload the instance configuration
   - [X] Flush the instance caches
   - [ ] Invalidate a given tile and re-prime it
@@ -119,9 +124,16 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
     - [ ] Invalidate a given tile and re-prime it across the cluster
 
 ## Sample Config
+A more verbose version of this config actually used for internal testing can be
+found at [config.toml.example](config.toml.example) in the root of the repo.
+
+More detailed information about configuring LOD and hardening it for production
+use can be found at [our documentation site](https://lod.tile.fund).
+
 ```toml
 [instance]
 port = 1337 # port to bind to
+admin_token = "GHglvODhAjIr9qyrchv2DPrKHRo1D7eN" # admin endpoint bearer token
 
 [[proxies]]
 # name of this proxy, available at http://lod/{name}/{z}/{x}/{y}.pbf
