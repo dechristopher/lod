@@ -21,7 +21,7 @@ func Serve() {
 		CaseSensitive:         true,
 		DisableStartupMessage: true,
 		ProxyHeader:           "X-Forwarded-For",
-		ReadTimeout:           time.Second * 10,
+		ReadTimeout:           time.Second * 2,
 		WriteTimeout:          time.Second * 30,
 		IdleTimeout:           time.Hour,
 		ErrorHandler: func(ctx *fiber.Ctx, err error) error {
