@@ -32,6 +32,6 @@ func Wire(r fiber.Router, proxy ...config.Proxy) {
 // handlers are defined. Acts as the final fallback.
 func NotFound(r *fiber.App) {
 	r.Use(func(c *fiber.Ctx) error {
-		return c.SendStatus(404)
+		return c.Status(404).SendString("")
 	})
 }
