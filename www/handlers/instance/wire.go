@@ -13,9 +13,6 @@ func Wire(r *fiber.App) {
 	// wire up all middleware components
 	middleware.Wire(instanceGroup)
 
-	// capabilities endpoint shows configuration summary
-	instanceGroup.Get("/capabilities", Capabilities)
-
 	// JSON service health / status handler
 	instanceGroup.Get("/status", Status)
 }
