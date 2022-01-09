@@ -25,6 +25,12 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 	// wire middleware for proxy group
 	middleware.Wire(r, p)
 
+	// enable auth middleware if admin token configured
+	if config.Cap.Instance.AdminToken != "" {
+		proxyGroup.Use(middleware.GenAuthMiddleware(p.AccessToken,
+			middleware.Query, true))
+	}
+
 	// configure CORS preflight genHandler
 	proxyGroup.Options("/:z/:x/:y.*", preflight)
 
