@@ -65,7 +65,7 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 
 		if env.IsDev() {
 			// provide useful error messages when running in dev mode
-			return ctx.Status(401).JSON(map[string]string{
+			return ctx.Status(fiber.StatusUnauthorized).JSON(map[string]string{
 				"status":  "error",
 				"message": "failed to auth, invalid token supplied",
 			})
@@ -73,11 +73,11 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 
 		if notFound {
 			// otherwise, pretend nothing exists if notFound is set
-			return ctx.Status(404).SendString("")
+			return ctx.Status(fiber.StatusNotFound).SendString("")
 		}
 
 		// return empty 401 if notFound is not set
-		return ctx.Status(401).SendString("")
+		return ctx.Status(fiber.StatusUnauthorized).SendString("")
 	}
 }
 
@@ -85,6 +85,6 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 // handlers are defined. Acts as the final fallback.
 func NotFound(r *fiber.App) {
 	r.Use(func(c *fiber.Ctx) error {
-		return c.Status(404).SendString("")
+		return c.Status(fiber.StatusNotFound).SendString("")
 	})
 }

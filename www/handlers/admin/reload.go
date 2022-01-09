@@ -14,8 +14,7 @@ func ReloadCapabilities(ctx *fiber.Ctx) error {
 	err := config.Read()
 	if err != nil {
 		util.Error(str.CAdmin, str.EReload, err.Error())
-		ctx.Status(500)
-		return ctx.JSON(map[string]string{
+		return ctx.Status(fiber.StatusInternalServerError).JSON(map[string]string{
 			"status": "failed",
 			"file":   *config.File,
 			"error":  err.Error(),
@@ -23,7 +22,6 @@ func ReloadCapabilities(ctx *fiber.Ctx) error {
 	}
 
 	util.Info(str.CAdmin, str.MReload)
-	ctx.Status(200)
 	return ctx.JSON(map[string]string{
 		"status": "ok",
 		"file":   *config.File,

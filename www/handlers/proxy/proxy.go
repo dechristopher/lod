@@ -39,7 +39,7 @@ func handle(p config.Proxy, ctx *fiber.Ctx) error {
 	if err != nil {
 		ctx.Locals("lod-cache", " :err ")
 		util.Error(str.CProxy, str.EBadRequest, err.Error())
-		return ctx.SendStatus(fiber.StatusBadRequest)
+		return ctx.Status(fiber.StatusBadRequest).SendString("")
 	}
 
 	// calculate the cache key for this request using XYZ and URL params
@@ -47,7 +47,7 @@ func handle(p config.Proxy, ctx *fiber.Ctx) error {
 	if err != nil {
 		ctx.Locals("lod-cache", "  :err")
 		util.Error(str.CProxy, str.ECacheBuildKey, err.Error())
-		return ctx.SendStatus(fiber.StatusInternalServerError)
+		return ctx.Status(fiber.StatusInternalServerError).SendString("")
 	}
 
 	if cachedTile := cache.Get(p.Name).Fetch(cacheKey); cachedTile != nil {
@@ -60,7 +60,7 @@ func handle(p config.Proxy, ctx *fiber.Ctx) error {
 				url:   tileUrl,
 				proxy: p,
 			})
-			return ctx.SendStatus(fiber.StatusInternalServerError)
+			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 
 		ctx.Locals("lod-cache", " :hit ")

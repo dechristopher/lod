@@ -23,8 +23,7 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 	c := cache.Get(ctx.Params("name"))
 	if c == nil {
 		util.Error(str.CAdmin, payload.ErrorMessage, "unknown", "invalid proxy name")
-		ctx.Status(400)
-		return ctx.JSON(map[string]string{
+		return ctx.Status(fiber.StatusBadRequest).JSON(map[string]string{
 			"status": "failed",
 			"error":  "invalid proxy name provided",
 		})
@@ -37,8 +36,7 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 	tile, err := helpers.GetTile(ctx)
 	if err != nil {
 		util.Error(str.CAdmin, payload.ErrorMessage, "unknown", err.Error())
-		ctx.Status(400)
-		return ctx.JSON(map[string]string{
+		return ctx.Status(fiber.StatusBadRequest).JSON(map[string]string{
 			"status":  "failed",
 			"error":   "invalid tile requested",
 			"message": err.Error(),
@@ -49,8 +47,7 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 	maxZoom, err := ctx.ParamsInt("maxZoom", payload.MaxZoom)
 	if err != nil {
 		util.Error(str.CAdmin, payload.ErrorMessage, tile, err.Error())
-		ctx.Status(500)
-		return ctx.JSON(map[string]string{
+		return ctx.Status(fiber.StatusInternalServerError).JSON(map[string]string{
 			"status":  "failed",
 			"error":   "internal server error",
 			"message": err.Error(),
@@ -85,7 +82,6 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 	//}
 
 	util.Info(str.CAdmin, payload.InfoMessage, tile.String(), maxZoom, len(tiles))
-	ctx.Status(200)
 	return ctx.JSON(map[string]string{
 		"status":    "ok",
 		"completed": fmt.Sprintf("%d/%d tiles", len(tiles)-failed, len(tiles)),

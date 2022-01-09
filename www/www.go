@@ -29,15 +29,14 @@ func Serve() {
 
 			// send JSON error output if in dev mode
 			if env.IsDev() {
-				ctx.Status(500)
-				return ctx.JSON(map[string]string{
-					"status": "internal error",
+				return ctx.Status(fiber.StatusInternalServerError).JSON(map[string]string{
+					"status": "internal server error",
 					"error":  err.Error(),
 				})
 			}
 
 			// otherwise, simply return 500
-			return ctx.SendStatus(500)
+			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		},
 	})
 
