@@ -72,7 +72,7 @@ Or just use our Docker image!
 You can create your own Dockerfile that adds a `config.toml` from the context
 into the config directory, like so:
 ```Dockerfile
-FROM tilefund/lod:0.4.6
+FROM tilefund/lod:0.6.0
 COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
 CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
 ```
@@ -128,7 +128,7 @@ A more verbose version of this config actually used for internal testing can be
 found at [config.toml.example](config.toml.example) in the root of the repo.
 
 More detailed information about configuring LOD and hardening it for production
-use can be found at [our documentation site](https://lod.tile.fund).
+use can be found at [our documentation site](https://lod.tile.fund/configuration/reference-guide).
 
 ```toml
 [instance]
