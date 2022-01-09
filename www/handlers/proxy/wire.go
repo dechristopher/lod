@@ -26,7 +26,7 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 	middleware.Wire(r, p)
 
 	// enable auth middleware if admin token configured
-	if config.Cap.Instance.AdminToken != "" {
+	if p.AccessToken != "" {
 		proxyGroup.Use(middleware.GenAuthMiddleware(p.AccessToken,
 			middleware.Query, true))
 	}
