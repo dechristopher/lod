@@ -67,7 +67,7 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 			// provide useful error messages when running in dev mode
 			return ctx.Status(401).JSON(map[string]string{
 				"status":  "error",
-				"message": "failed to auth, invalid bearer token supplied",
+				"message": "failed to auth, invalid token supplied",
 			})
 		}
 
