@@ -5,7 +5,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/www/handlers/admin"
-	"github.com/tile-fund/lod/www/handlers/instance"
 
 	"github.com/tile-fund/lod/www/handlers/proxy"
 	"github.com/tile-fund/lod/www/middleware"
@@ -16,9 +15,6 @@ import (
 func Wire(r *fiber.App) {
 	// recover from panics
 	r.Use(recover.New())
-
-	// wire instance group handlers
-	instance.Wire(r)
 
 	// wire admin group handlers if not disabled
 	if !config.Cap.Instance.AdminDisabled {
