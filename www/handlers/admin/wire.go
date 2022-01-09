@@ -3,8 +3,6 @@ package admin
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/env"
-
 	"github.com/tile-fund/lod/www/middleware"
 )
 
@@ -18,7 +16,8 @@ func Wire(r *fiber.App) {
 
 	// enable auth middleware if admin token configured
 	if config.Cap.Instance.AdminToken != "" {
-		adminGroup.Use(authMiddleware)
+		adminGroup.Use(middleware.GenAuthMiddleware(config.Cap.Instance.AdminToken,
+			middleware.Bearer, true))
 	}
 
 	// JSON service health / status handler
@@ -48,22 +47,4 @@ func Wire(r *fiber.App) {
 	// maxZoom defaults to zoom level 12
 	adminGroup.Get("/:name/prime/deep/:z/:x/:y", PrimeTileDeep)
 	adminGroup.Get("/:name/prime/deep/:z/:x/:y/:maxZoom", PrimeTileDeep)
-}
-
-// authMiddleware checks for valid bearer tokens
-func authMiddleware(ctx *fiber.Ctx) error {
-	if ctx.GetReqHeaders()["Authorization"] != "Bearer "+config.Cap.Instance.AdminToken {
-		if env.IsDev() {
-			// provide useful error messages when running in dev mode
-			return ctx.Status(400).JSON(map[string]string{
-				"status":  "error",
-				"message": "failed to auth, invalid bearer token supplied",
-			})
-		}
-		// otherwise, pretend nothing exists
-		return ctx.Status(404).SendString("")
-	}
-
-	// continue normally if checks succeed
-	return ctx.Next()
 }
