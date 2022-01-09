@@ -21,6 +21,9 @@ func Wire(r *fiber.App) {
 		adminGroup.Use(authMiddleware)
 	}
 
+	// JSON service health / status handler
+	adminGroup.Get("/status", Status)
+
 	// capabilities endpoint shows configuration summary
 	adminGroup.Get("/capabilities", Capabilities)
 
