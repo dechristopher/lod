@@ -29,8 +29,11 @@ func Wire(r *fiber.App) {
 	// reload endpoint will reload capabilities configuration from config.File
 	adminGroup.Get("/reload", ReloadCapabilities)
 
+	// flush all proxy caches
+	adminGroup.Get("/flush", Flush)
+
 	// flush an entire proxy cache by name
-	adminGroup.Get("/:name/flush/", Flush)
+	adminGroup.Get("/:name/flush", Flush)
 
 	// invalidate a given tile without re-priming
 	adminGroup.Get("/:name/invalidate/:z/:x/:y", InvalidateTile)
