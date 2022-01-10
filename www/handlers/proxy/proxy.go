@@ -20,16 +20,16 @@ type tileError struct {
 // genHandler builds a new proxy endpoint handler from configuration
 func genHandler(p config.Proxy) fiber.Handler {
 	// preconfigure cache on boot
-	cache.Get(p.Name)
+	c := cache.Get(p.Name)
 
 	// handler function to wire to endpoint
 	return func(ctx *fiber.Ctx) error {
-		return handle(p, ctx)
+		return handle(p, c, ctx)
 	}
 }
 
 // handle proxy requests for the specified proxy config
-func handle(p config.Proxy, ctx *fiber.Ctx) error {
+func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 	// check presence of configured URL parameters and store
 	// their values in a map within the request locals
 	helpers.FillParamsMap(p, ctx)
@@ -50,7 +50,7 @@ func handle(p config.Proxy, ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).SendString("")
 	}
 
-	if cachedTile := cache.Get(p.Name).Fetch(cacheKey); cachedTile != nil {
+	if cachedTile := cache.Fetch(cacheKey); cachedTile != nil {
 		// IF WE HIT A CACHED TILE
 		// write the tile to the response body
 		_, err := ctx.Write(cachedTile.TileData())
@@ -92,7 +92,7 @@ func handle(p config.Proxy, ctx *fiber.Ctx) error {
 			p.DeleteHeaders(ctx)
 
 			// spin off a routine to cache the tile without blocking the response
-			go cache.Get(p.Name).EncodeSet(cacheKey, tileData, headers)
+			go cache.EncodeSet(cacheKey, tileData, headers)
 		}
 	}
 
