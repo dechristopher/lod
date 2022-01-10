@@ -37,10 +37,11 @@ type Capabilities struct {
 
 // Instance configuration for LOD
 type Instance struct {
-	Port          int    `json:"port" toml:"port"`                     // configured LOD port
-	Environment   string `json:"environment"`                          // configured LOD environment
-	AdminDisabled bool   `json:"admin_disabled" toml:"admin_disabled"` // whether the admin endpoints are disabled
-	AdminToken    string `json:"-" toml:"admin_token"`                 // admin endpoint auth bearer token
+	Port           int    `json:"port" toml:"port"`                       // configured LOD port
+	Environment    string `json:"environment"`                            // configured LOD environment
+	AdminDisabled  bool   `json:"admin_disabled" toml:"admin_disabled"`   // whether the admin endpoints are disabled
+	AdminToken     string `json:"-" toml:"admin_token"`                   // admin endpoint auth bearer token
+	MetricsEnabled bool   `json:"metrics_enabled" toml:"metrics_enabled"` // whether metrics are enabled
 }
 
 // Proxy represents a configuration for a single endpoint proxy instance

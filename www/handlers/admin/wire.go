@@ -2,8 +2,10 @@ package admin
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/www/middleware"
+	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
 // Wire admin group and endpoint handlers
@@ -18,6 +20,15 @@ func Wire(r *fiber.App) {
 	if config.Cap.Instance.AdminToken != "" {
 		adminGroup.Use(middleware.GenAuthMiddleware(config.Cap.Instance.AdminToken,
 			middleware.Bearer, true))
+	}
+
+	if config.Cap.Instance.MetricsEnabled {
+		// prometheus metrics endpoint
+		p := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+		adminGroup.Get("/metrics/prometheus", func(c *fiber.Ctx) error {
+			p(c.Context())
+			return nil
+		})
 	}
 
 	// JSON service health / status handler
