@@ -8,5 +8,5 @@ import (
 // Capabilities returns the JSON formatted output of the current
 // instance configuration (capabilities)
 func Capabilities(c *fiber.Ctx) error {
-	return c.JSON(config.Cap)
+	return c.JSON(config.Get())
 }

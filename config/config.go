@@ -21,8 +21,8 @@ var (
 	// Version of LOD
 	Version = ".dev"
 
-	// Cap is a store for local instance Capabilities
-	Cap Capabilities
+	// cap is a store for local instance Capabilities
+	cap Capabilities
 
 	// File is a reference to the config file path to read from
 	File *string
@@ -93,6 +93,11 @@ var zeroCache = Cache{
 	KeyTemplate: "",
 }
 
+// Get returns a pointer to the global configuration
+func Get() *Capabilities {
+	return &cap
+}
+
 // Read config file into Capabilities
 func Read() error {
 	var configData []byte
@@ -131,35 +136,35 @@ func Read() error {
 	}
 
 	// decode config file as TOML
-	if _, err = toml.Decode(string(configData), &Cap); err != nil {
+	if _, err = toml.Decode(string(configData), &cap); err != nil {
 		return err
 	}
 
 	// set default cache parameters if not provided
-	for i := range Cap.Proxies {
-		if Cap.Proxies[i].Cache == zeroCache {
-			Cap.Proxies[i].Cache = defaultCache
+	for i := range cap.Proxies {
+		if cap.Proxies[i].Cache == zeroCache {
+			cap.Proxies[i].Cache = defaultCache
 		}
 
-		if Cap.Proxies[i].Cache.KeyTemplate == "" {
-			Cap.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
+		if cap.Proxies[i].Cache.KeyTemplate == "" {
+			cap.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
 		}
 
-		if Cap.Proxies[i].AddHeaders == nil {
-			Cap.Proxies[i].AddHeaders = make([]string, 0)
+		if cap.Proxies[i].AddHeaders == nil {
+			cap.Proxies[i].AddHeaders = make([]string, 0)
 		}
 
 		// Register default content headers
-		Cap.Proxies[i].registerHeader("Content-Type")
-		Cap.Proxies[i].registerHeader("Content-Encoding")
+		cap.Proxies[i].registerHeader("Content-Type")
+		cap.Proxies[i].registerHeader("Content-Encoding")
 	}
 
 	// inject instance info to config for viewing in /capabilities
-	Cap.Instance.Environment = string(env.GetEnv())
-	Cap.Version = Version
+	cap.Instance.Environment = string(env.GetEnv())
+	cap.Version = Version
 
 	// validate configuration
-	return validate(&Cap)
+	return validate(&cap)
 }
 
 // validate instance Capabilities for sanity and errors
@@ -360,8 +365,8 @@ func validateParams(proxy *Proxy) error {
 func GetPort() int {
 	portEnv, ok := os.LookupEnv("PORT")
 	if !ok {
-		if Cap.Instance.Port != 0 {
-			return Cap.Instance.Port
+		if cap.Instance.Port != 0 {
+			return cap.Instance.Port
 		}
 		return 1337
 	}

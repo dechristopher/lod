@@ -17,12 +17,12 @@ func Wire(r *fiber.App) {
 	middleware.Wire(adminGroup)
 
 	// enable auth middleware if admin token configured
-	if config.Cap.Instance.AdminToken != "" {
-		adminGroup.Use(middleware.GenAuthMiddleware(config.Cap.Instance.AdminToken,
+	if config.Get().Instance.AdminToken != "" {
+		adminGroup.Use(middleware.GenAuthMiddleware(config.Get().Instance.AdminToken,
 			middleware.Bearer, true))
 	}
 
-	if config.Cap.Instance.MetricsEnabled {
+	if config.Get().Instance.MetricsEnabled {
 		// prometheus metrics endpoint
 		p := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
 		adminGroup.Get("/metrics/prometheus", func(c *fiber.Ctx) error {
@@ -39,6 +39,12 @@ func Wire(r *fiber.App) {
 
 	// reload endpoint will reload capabilities configuration from config.File
 	adminGroup.Get("/reload", ReloadCapabilities)
+
+	// return stats for all caches
+	adminGroup.Get("/stats", Stats)
+
+	// return stats for a cache by name
+	adminGroup.Get("/:name/stats", Stats)
 
 	// flush all proxy caches
 	adminGroup.Get("/flush", Flush)

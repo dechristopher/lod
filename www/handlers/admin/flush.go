@@ -12,7 +12,7 @@ import (
 func Flush(ctx *fiber.Ctx) error {
 	if ctx.Path() == "/admin/flush" {
 		// flush all configured proxies
-		for _, proxy := range config.Cap.Proxies {
+		for _, proxy := range config.Get().Proxies {
 			err := cache.Get(proxy.Name).Flush()
 
 			if err != nil {
@@ -38,7 +38,7 @@ func Flush(ctx *fiber.Ctx) error {
 	}
 
 	// search for proxy with given name
-	for _, proxy := range config.Cap.Proxies {
+	for _, proxy := range config.Get().Proxies {
 		if proxy.Name == name {
 			// flush the proxy's internal cache
 			err := cache.Get(proxy.Name).Flush()

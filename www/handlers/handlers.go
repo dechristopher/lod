@@ -17,7 +17,7 @@ func Wire(r *fiber.App) {
 	r.Use(recover.New())
 
 	// wire admin group handlers if not disabled
-	if !config.Cap.Instance.AdminDisabled {
+	if !config.Get().Instance.AdminDisabled {
 		admin.Wire(r)
 	}
 

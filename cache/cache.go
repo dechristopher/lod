@@ -43,7 +43,7 @@ func Get(name string) *Cache {
 		cacheLock.Lock()
 		defer cacheLock.Unlock()
 		// find and populate a new cache instance for the given name
-		for _, proxy := range config.Cap.Proxies {
+		for _, proxy := range config.Get().Proxies {
 			if proxy.Name == name {
 				conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
 				conf.StatsEnabled = !env.IsProd()
@@ -204,4 +204,8 @@ func (c *Cache) Invalidate(key string) error {
 // Flush the internal bigcache instance
 func (c *Cache) Flush() error {
 	return c.internal.Reset()
+}
+
+func (c *Cache) Stats() bigcache.Stats {
+	return c.internal.Stats()
 }
