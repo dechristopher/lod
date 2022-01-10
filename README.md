@@ -97,20 +97,24 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
 ## v1.0 Feature Roadmap
 
 - [X] Multi-level caching
-    - [X] In-memory, tunable LRU cache as first level
-    - [X] Redis cluster with configurable TTL as second level
+  - [X] In-memory, tunable LRU cache as first level
+  - [X] Redis cluster with configurable TTL as second level
+- [X] Dynamic query parameters
+  - [X] Allow configurable query parameters for tile URLs
+  - [X] Add to cache key for separate caching (osm/4/5/6/{osm_id})
 - [X] Configurable header proxying and deletion
+  - [X] Configurable headers to pull back into proxied responses from LOD
+  - [X] Configurable headers to delete from proxied responses from LOD
+  - [X] Configurable headers to inject into upstream tileserver requests
   - [X] `Content-Type` and `Content-Encoding` added by default
 - [ ] Internal stats tracking
   - [ ] Hits, misses, hit-rate
   - [ ] Tiles per second (load averages)
   - [ ] Tile upstream fetch times (avg, 75th, 99th)
-  - [ ] Expose Prometheus endpoint
+  - [X] Expose Prometheus endpoint
 - [ ] Supports multiple configured tileserver proxies
   - [X] Separate authentication (bearer tokens and CORS)
   - [X] Separate internal cache instances per proxy
-  - [X] Allow configurable query parameters for tile URLs
-    - [X] Add to cache key for separate caching (osm/4/5/6/osm_id=19)
   - [ ] Separate stats tracking
 - [ ] Administrative endpoints
   - [X] Security via Bearer Token Authorization
@@ -143,9 +147,9 @@ tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf"
 # comma-separated list of allowed CORS origins
 cors_origins = "https://example.com"
 # auth token (?token=XXX) to require for requests to upstream tileserver
-access_token = "MyTilesArePrivate" 
+access_token = "MyTilesArePrivate"
 # headers to pull and cache from the tileserver response
-add_headers = [ "X-We-Want-This", "X-This-One-Too" ] 
+pull_headers = ["X-We-Want-This", "X-This-One-Too"]
 # headers to delete from the tileserver response
 del_headers = [ "X-Get-Rid-Of-Me" ]
 
@@ -159,6 +163,9 @@ redis_ttl = "24h" # redis tile cache TTL, or "0" for no expiry
 redis_url = "redis://localhost:6379/0" # redis connection URL
 key_template = "{z}/{x}/{y}" # cache key template string, supports parameter names
 
+[[proxies.add_headers]] # headers to inject into upstream tileserver requests
+name = "Referer" # name of header to add
+value = "https://yoursite.com/" # value of header to add
 
 # Supports many configured proxy instances for caching multiple tileservers
 [[proxies]]

@@ -10,8 +10,12 @@ tile_url = "http://tegola.example.com:8080/maps/basemap/{z}/{x}/{y}.pbf"
 cors_origins = "*"
 del_headers = ["Tegola-Cache"]
 
+[[proxies.add_headers]]
+name = "Referer"
+value = "https://yoursite.com/"
+
 [[proxies.params]]
-name = "lid"
+name = "osm_id"
 default = "0"
 
 [proxies.cache]
@@ -19,7 +23,7 @@ mem_cap = 200
 mem_ttl = "2h"
 redis_ttl = "48h"
 redis_url = "redis://localhost:6379/0"
-key_template = "basemap:{lid}:{z}:{x}:{y}"
+key_template = "basemap:{osm_id}:{z}:{x}:{y}"
 
 [[proxies]]
 name = "tornadoes"
