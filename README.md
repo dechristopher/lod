@@ -142,7 +142,7 @@ name = "osm"
 tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf" 
 # comma-separated list of allowed CORS origins
 cors_origins = "https://example.com"
-# auth bearer token to require for requests to upstream tileserver
+# auth token (?token=XXX) to require for requests to upstream tileserver
 access_token = "MyTilesArePrivate" 
 # headers to pull and cache from the tileserver response
 add_headers = [ "X-We-Want-This", "X-This-One-Too" ] 
