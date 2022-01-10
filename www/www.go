@@ -8,6 +8,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
+
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"

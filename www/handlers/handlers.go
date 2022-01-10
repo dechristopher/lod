@@ -3,9 +3,9 @@ package handlers
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/www/handlers/admin"
-
 	"github.com/tile-fund/lod/www/handlers/proxy"
 	"github.com/tile-fund/lod/www/middleware"
 )

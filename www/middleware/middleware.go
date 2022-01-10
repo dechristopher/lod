@@ -7,6 +7,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 )

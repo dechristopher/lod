@@ -2,9 +2,9 @@ package admin
 
 import (
 	"github.com/gofiber/fiber/v2"
+
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
-
 	"github.com/tile-fund/lod/util"
 )
 

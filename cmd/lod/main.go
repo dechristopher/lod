@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/tile-fund/lod/config"
 
+	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
