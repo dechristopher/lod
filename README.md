@@ -167,6 +167,7 @@ key_template = "{z}/{x}/{y}" # cache key template string, supports parameter nam
 name = "Referer" # name of header to add
 value = "https://yoursite.com/" # value of header to add
 
+
 # Supports many configured proxy instances for caching multiple tileservers
 [[proxies]]
 name = "another"
