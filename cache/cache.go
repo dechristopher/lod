@@ -50,8 +50,8 @@ func Get(name string) *Cache {
 				conf.StatsEnabled = !env.IsProd()
 				conf.MaxEntrySize = 1024 * 10 // 100KB
 				conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
-				internal, err := bigcache.NewBigCache(conf)
 
+				internal, err := bigcache.NewBigCache(conf)
 				if err != nil {
 					util.Error(str.CCache, str.ECacheCreate, err.Error())
 					return nil
