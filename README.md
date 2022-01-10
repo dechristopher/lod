@@ -137,13 +137,15 @@ use can be found at [our documentation site](https://lod.tile.fund/configuration
 ```toml
 [instance]
 port = 1337 # port to bind to
-admin_token = "GHglvODhAjIr9qyrchv2DPrKHRo1D7eN" # admin endpoint bearer token
+admin_token = "supersecret" # admin endpoint bearer token
 
+# base proxy configuration
 [[proxies]]
-# name of this proxy, available at http://lod/{name}/{z}/{x}/{y}.pbf
+# name of this proxy, available at http://lod/{name}/{z}/{x}/{y}.{file_extension}
 name = "osm"
-# url of the upstream tileserver
-tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf" 
+# url of the upstream tileserver with template parameters
+# for the X, Y, and Z values. These are required.
+tile_url = "https://tile.example.com/osm/{z}/{x}/{y}.pbf"
 # comma-separated list of allowed CORS origins
 cors_origins = "https://example.com"
 # auth token (?token=XXX) to require for requests to upstream tileserver
@@ -151,21 +153,30 @@ access_token = "MyTilesArePrivate"
 # headers to pull and cache from the tileserver response
 pull_headers = ["X-We-Want-This", "X-This-One-Too"]
 # headers to delete from the tileserver response
-del_headers = [ "X-Get-Rid-Of-Me" ]
+del_headers = ["X-Get-Rid-Of-Me"]
 
+# proxy cache configuration
 [proxies.cache]
-mem_cap = 100    # maximum capacity in MB of the in-memory cache
+# maximum capacity in MB of the in-memory cache
+mem_cap = 100
 # Cache TTLs are set using Go's built-in time.ParseDuration
 # Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 # For example: 1h, 5m, 300s, 1000ms, 2h35m, etc.
-mem_ttl = "1h" # in-memory cache TTL
-redis_ttl = "24h" # redis tile cache TTL, or "0" for no expiry
-redis_url = "redis://localhost:6379/0" # redis connection URL
-key_template = "{z}/{x}/{y}" # cache key template string, supports parameter names
+# in-memory cache TTL
+mem_ttl = "1h"
+# redis tile cache TTL, or "0" for no expiry
+redis_ttl = "24h"
+# redis connection URL
+redis_url = "redis://localhost:6379/0"
+# cache key template string, supports parameter names
+key_template = "{z}/{x}/{y}"
 
-[[proxies.add_headers]] # headers to inject into upstream tileserver requests
-name = "Referer" # name of header to add
-value = "https://yoursite.com/" # value of header to add
+# headers to inject into upstream tileserver requests
+[[proxies.add_headers]]
+# name of header to add
+name = "Referer"
+# value of header to add
+value = "https://yoursite.com/"
 
 
 # Supports many configured proxy instances for caching multiple tileservers
