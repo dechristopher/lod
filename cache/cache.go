@@ -6,6 +6,7 @@ import (
 
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-redis/redis/v8"
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
@@ -93,7 +94,7 @@ func Get(name string) *Cache {
 
 // Fetch will attempt to grab a tile by key from any of the cache layers,
 // populating higher layers of the cache if found.
-func (c *Cache) Fetch(key string) *TilePacket {
+func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 	cachedTile, err := c.internal.Get(key)
 	if err != nil {
 		if err == bigcache.ErrEntryNotFound {
@@ -103,6 +104,8 @@ func (c *Cache) Fetch(key string) *TilePacket {
 			return nil
 		}
 	}
+
+	hit := " :hit-i"
 
 	if cachedTile == nil && c.external != nil {
 		// try fetching from redis if not present in internal cache
@@ -124,6 +127,8 @@ func (c *Cache) Fetch(key string) *TilePacket {
 			return nil
 		}
 
+		hit = " :hit-e"
+
 		// if TTL set, extend Redis TTL when we fetch a tile to prevent
 		// key expiry for tiles that are fetched periodically
 		if c.Proxy.Cache.RedisTTLDuration > 0 {
@@ -136,6 +141,8 @@ func (c *Cache) Fetch(key string) *TilePacket {
 		util.DebugFlag("cache", str.CCache, str.DCacheMissExt, key)
 		return nil
 	}
+
+	ctx.Locals("lod-cache", hit)
 
 	// wrap bytes in TilePacket container
 	tile := TilePacket(cachedTile)

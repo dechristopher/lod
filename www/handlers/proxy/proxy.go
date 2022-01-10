@@ -51,7 +51,7 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 		return ctx.Status(fiber.StatusInternalServerError).SendString("")
 	}
 
-	if cachedTile := cache.Fetch(cacheKey); cachedTile != nil {
+	if cachedTile := cache.Fetch(cacheKey, ctx); cachedTile != nil {
 		// IF WE HIT A CACHED TILE
 		// write the tile to the response body
 		_, err := ctx.Write(cachedTile.TileData())
@@ -64,21 +64,28 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 
-		ctx.Locals("lod-cache", " :hit ")
-
 		// set stored headers in response
 		for key, val := range cachedTile.Headers() {
 			ctx.Set(key, val)
 		}
 	} else {
 		// IF WE MISSED A CACHED TILE
-		ctx.Locals("lod-cache", " :miss")
+		ctx.Locals("lod-cache", " :miss ")
+
+		// inject headers to upstream request if any are configured
+		if len(p.AddHeaders) > 0 {
+			for _, header := range p.AddHeaders {
+				ctx.Request().Header.Del(header.Name)
+				ctx.Request().Header.Add(header.Name, header.Value)
+			}
+		}
+
 		// perform request to tile URL
 		if err := proxy.Do(ctx, tileUrl); err != nil {
 			return err
 		}
 
-		if len(ctx.Response().Body()) > 0 {
+		if len(ctx.Response().Body()) > 0 && ctx.Response().StatusCode() == fiber.StatusOK {
 			// copy tile data into separate slice, so we don't lose the reference
 			tileData := make([]byte, len(ctx.Response().Body()))
 			copy(tileData, ctx.Response().Body())
@@ -94,6 +101,10 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 
 			// spin off a routine to cache the tile without blocking the response
 			go cache.EncodeSet(cacheKey, tileData, headers)
+		} else {
+			ctx.Locals("lod-cache", " :err-u")
+			// Send bad request response with empty body if upstream
+			return ctx.Status(fiber.StatusBadRequest).SendString("")
 		}
 	}
 
