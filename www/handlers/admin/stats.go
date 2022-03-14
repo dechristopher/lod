@@ -2,14 +2,14 @@ package admin
 
 import (
 	"github.com/gofiber/fiber/v2"
-
 	"github.com/tile-fund/lod/cache"
+	"github.com/tile-fund/lod/util"
 )
 
 type stats struct {
-	Hits     int64   `json:"hits"`     // total cache hits this proxy has encountered
-	Misses   int64   `json:"misses"`   // total cache misses this proxy has encountered
-	Requests int64   `json:"requests"` // total requests this proxy has serviced
+	Hits     float64 `json:"hits"`     // total cache hits this proxy has encountered
+	Misses   float64 `json:"misses"`   // total cache misses this proxy has encountered
+	Requests float64 `json:"requests"` // total requests this proxy has serviced
 	HitRate  float64 `json:"hit_rate"` // overall hit rate, hits/total requests
 	TPS      float64 `json:"tps"`      // average tiles per second served over the past minute
 	Cache    fetch   `json:"cache"`    // cache fetch performance stats
@@ -46,13 +46,14 @@ func Stats(ctx *fiber.Ctx) error {
 		})
 	}
 
-	internalStats := c.Stats()
+	hits := util.GetMetricValue(c.Metrics.CacheHits)
+	misses := util.GetMetricValue(c.Metrics.CacheMisses)
 
 	return ctx.JSON(stats{
-		Hits:     internalStats.Hits,
-		Misses:   internalStats.Misses,
-		Requests: internalStats.Hits + internalStats.Misses,
-		HitRate:  float64(internalStats.Hits) / float64(internalStats.Hits+internalStats.Misses),
+		Hits:     hits,
+		Misses:   misses,
+		Requests: hits + misses,
+		HitRate:  util.GetMetricValue(c.Metrics.HitRate),
 		TPS:      0,
 		Cache: fetch{
 			FetchAvg:  0,

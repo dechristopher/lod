@@ -23,6 +23,8 @@ var (
 	// Version of LOD
 	Version = ".dev"
 
+	Namespace = "lod"
+
 	// conf is a store for local instance Capabilities
 	conf Capabilities
 

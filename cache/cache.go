@@ -7,12 +7,16 @@ import (
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 
 	"github.com/tile-fund/lod/config"
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
 	"github.com/tile-fund/lod/util"
 )
+
+var Subsystem = "cache"
 
 // Caches configured for this instance
 var Caches CachesMap = make(map[string]*Cache)
@@ -30,6 +34,14 @@ type Cache struct {
 	internal *bigcache.BigCache // pointer to internal cache instance
 	external *redis.Client      // pointer to external Redis cache
 	Proxy    *config.Proxy      // copy of the proxy configuration
+	Metrics  *Metrics           // metrics container instance
+}
+
+// Metrics for the cache instance
+type Metrics struct {
+	CacheHits   prometheus.Counter     // cache hits
+	CacheMisses prometheus.Counter     // cache misses
+	HitRate     prometheus.CounterFunc // cache hit rate
 }
 
 // OneMB represents one megabyte worth of bytes
@@ -75,13 +87,55 @@ func Get(name string) *Cache {
 					}
 				}
 
+				cacheHits := promauto.NewCounter(prometheus.CounterOpts{
+					Namespace: config.Namespace,
+					Subsystem: Subsystem,
+					Name:      "hit_total",
+					ConstLabels: map[string]string{
+						"proxy": proxy.Name,
+					},
+					Help: "The total number of cache hits",
+				})
+
+				cacheMisses := promauto.NewCounter(prometheus.CounterOpts{
+					Namespace: config.Namespace,
+					Subsystem: Subsystem,
+					Name:      "miss_total",
+					ConstLabels: map[string]string{
+						"proxy": proxy.Name,
+					},
+					Help: "The total number of cache misses",
+				})
+
+				hitRate := promauto.NewCounterFunc(prometheus.CounterOpts{
+					Namespace: config.Namespace,
+					Subsystem: Subsystem,
+					Name:      "hit_rate",
+					ConstLabels: map[string]string{
+						"proxy": proxy.Name,
+					},
+					Help: "The rate of hits to misses",
+				}, func() float64 {
+					hits := util.GetMetricValue(cacheHits)
+					misses := util.GetMetricValue(cacheMisses)
+					return hits / (hits + misses)
+				})
+
+				metrics := &Metrics{
+					CacheHits:   cacheHits,
+					CacheMisses: cacheMisses,
+					HitRate:     hitRate,
+				}
+
 				util.DebugFlag("cache", str.CCache, str.DCacheUp, name)
 
 				Caches[name] = &Cache{
 					internal: internal,
 					external: external,
 					Proxy:    &proxy,
+					Metrics:  metrics,
 				}
+
 				return Caches[name]
 			}
 		}
@@ -113,6 +167,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 		if redisTile.Err() != nil {
 			if redisTile.Err() == redis.Nil {
 				// exit early if we don't have anything cached at any level
+				c.Metrics.CacheMisses.Inc()
 				util.DebugFlag("cache", str.CCache, str.DCacheMissExt, key)
 				return nil
 			}
@@ -138,11 +193,13 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 
 	if cachedTile == nil {
 		// exit if we don't have anything cached at any level
+		c.Metrics.CacheMisses.Inc()
 		util.DebugFlag("cache", str.CCache, str.DCacheMissExt, key)
 		return nil
 	}
 
 	ctx.Locals("lod-cache", hit)
+	c.Metrics.CacheHits.Inc()
 
 	// wrap bytes in TilePacket container
 	tile := TilePacket(cachedTile)
