@@ -143,6 +143,9 @@ func Read() error {
 		}
 	}
 
+	// expand environment variables present within raw config
+	configData = []byte(os.ExpandEnv(string(configData)))
+
 	// decode config file as TOML
 	if _, err = toml.Decode(string(configData), &conf); err != nil {
 		return err
