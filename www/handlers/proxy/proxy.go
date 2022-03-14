@@ -2,9 +2,11 @@ package proxy
 
 import (
 	"net/url"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
+	"github.com/tile-fund/lod/tile"
 
 	"github.com/tile-fund/lod/cache"
 	"github.com/tile-fund/lod/config"
@@ -123,6 +125,12 @@ func buildTileUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
 
 	// replace XYZ values in the tile URL
 	baseUrl := currentTile.InjectString(proxy.TileURL)
+
+	// replace dynamic endpoint parameter in URL if configured
+	if proxy.HasEParam {
+		endpoint := ctx.Params("e")
+		baseUrl = strings.ReplaceAll(baseUrl, tile.EndpointTemplate, endpoint)
+	}
 
 	// fetch params from context for possible addition to URL
 	paramsMap := helpers.GetParamsFromCtx(ctx)

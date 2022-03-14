@@ -12,6 +12,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gofiber/fiber/v2"
+	"github.com/tile-fund/lod/tile"
 
 	"github.com/tile-fund/lod/env"
 	"github.com/tile-fund/lod/str"
@@ -49,6 +50,7 @@ type Instance struct {
 type Proxy struct {
 	Name        string   `json:"name" toml:"name"`                 // display name for this proxy
 	TileURL     string   `json:"tile_url" toml:"tile_url"`         // templated tileserver URL that this instance will hit
+	HasEParam   bool     `json:"has_endpoint_param"`               // internal variable to track whether this proxy has a dynamic endpoint configured
 	CorsOrigins string   `json:"cors_origins" toml:"cors_origins"` // allowed CORS origins, comma separated
 	PullHeaders []string `json:"pull_headers" toml:"pull_headers"` // additional headers to pull and cache from the tileserver
 	DelHeaders  []string `json:"del_headers" toml:"del_headers"`   // headers to exclude from the tileserver response
@@ -250,6 +252,9 @@ func validateProxy(num int, proxy *Proxy) error {
 		}
 	}
 
+	// reflect presence of dynamic endpoint template in HasEParam
+	proxy.HasEParam = strings.Contains(proxy.TileURL, tile.EndpointTemplate)
+
 	if !strings.Contains(proxy.TileURL, "{z}") {
 		return ErrMissingTileURLTemplate{
 			ProxyName: proxy.Name,
@@ -340,13 +345,14 @@ func validateCache(proxy *Proxy) error {
 	return nil
 }
 
-// validateParams ensures configured params don't have valid and non-overlapping names
+// validateParams ensures configured params have valid and non-overlapping names
 func validateParams(proxy *Proxy) error {
 	if len(proxy.Params) == 0 {
 		return nil
 	}
 
-	var usedNames []string
+	// begin with reserved parameter names
+	var usedNames = []string{"e", "z", "x", "y"}
 
 	for i, param := range proxy.Params {
 		if param.Name == "" {

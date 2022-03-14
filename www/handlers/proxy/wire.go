@@ -17,6 +17,8 @@ func Wire(r *fiber.App) {
 	}
 }
 
+const handlerEndpointPath = "/:z/:x/:y.*"
+
 // wireProxy configures a new proxy endpoint from the configuration under
 // a named Router group
 func wireProxy(r *fiber.App, p config.Proxy) {
@@ -32,11 +34,17 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 			middleware.Query, true))
 	}
 
+	path := handlerEndpointPath
+	// if dynamic endpoint configured, add endpoint path parameter
+	if p.HasEParam {
+		path = "/:e" + path
+	}
+
 	// configure CORS preflight genHandler
-	proxyGroup.Options("/:z/:x/:y.*", preflight)
+	proxyGroup.Options(path, preflight)
 
 	// configure proxy endpoint genHandler
-	proxyGroup.Get("/:z/:x/:y.*", genHandler(p))
+	proxyGroup.Get(path, genHandler(p))
 
 	// set common cors headers after handlers to override response from upstream
 	proxyGroup.Use(corsHeaders(p))

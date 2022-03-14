@@ -51,6 +51,12 @@ func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, 
 	// replace XYZ values in the key template
 	key := currentTile.InjectString(proxy.Cache.KeyTemplate)
 
+	// replace dynamic endpoint parameter in cache key if configured
+	if proxy.HasEParam && strings.Contains(key, tile.EndpointTemplate) {
+		endpoint := ctx.Params("e")
+		key = strings.ReplaceAll(key, tile.EndpointTemplate, endpoint)
+	}
+
 	// fetch params from context for possible substitution
 	paramsMap := GetParamsFromCtx(ctx)
 	if paramsMap == nil {

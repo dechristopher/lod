@@ -10,6 +10,8 @@ import (
 	"github.com/twpayne/go-geos"
 )
 
+const EndpointTemplate = "{e}"
+
 // Tile represents a request for a single tile by layer class
 type Tile struct {
 	X    int
