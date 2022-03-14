@@ -2,11 +2,14 @@
 
 [instance]
 port = 1337
-admin_token = "GHglvODhAjIr9qyrchv2DPrKHRo1D7eN"
+# config supports environment variable expansion
+admin_token = "${ADMIN_TOKEN}"
 
 [[proxies]]
-name = "basemap"
-tile_url = "http://tegola.example.com:8080/maps/basemap/{z}/{x}/{y}.pbf"
+name = "maps"
+# dynamic endpoint via special {e} parameter accessible via
+# http://lod:1337/maps/{e}/{z}/{x}/{y}.pbf
+tile_url = "http://tegola.example.com:8080/maps/{e}/{z}/{x}/{y}.pbf"
 cors_origins = "*"
 del_headers = ["Tegola-Cache"]
 
@@ -23,7 +26,8 @@ mem_cap = 200
 mem_ttl = "2h"
 redis_ttl = "48h"
 redis_url = "redis://localhost:6379/0"
-key_template = "basemap:{osm_id}:{z}:{x}:{y}"
+# dynamic endpoint name in cache key (replaces {e})
+key_template = "basemap:{e}:{z}:{x}:{y}:{osm_id}"
 
 [[proxies]]
 name = "tornadoes"
