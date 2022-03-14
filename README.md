@@ -136,8 +136,10 @@ use can be found at [our documentation site](https://lod.tile.fund/configuration
 
 ```toml
 [instance]
-port = 1337 # port to bind to
-admin_token = "supersecret" # admin endpoint bearer token
+# port to bind to
+port = 1337
+# admin endpoint bearer token
+admin_token = "${ADMIN_TOKEN}" # config supports environment variables
 
 # base proxy configuration
 [[proxies]]
