@@ -6,8 +6,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/tile-fund/lod/env"
-	"github.com/tile-fund/lod/str"
+	"github.com/dechristopher/lod/env"
+	"github.com/dechristopher/lod/str"
 )
 
 // LogMessage is a json struct used for non-stdout log messages

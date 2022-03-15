@@ -3,10 +3,10 @@ package admin
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/tile-fund/lod/cache"
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/cache"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
 )
 
 // Flush an entire proxy cache by name, or all caches

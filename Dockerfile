@@ -1,6 +1,6 @@
 # To build, run in root of LOD source tree:
 #
-#	$ git clone git@github.com:tile-fund/lod.git or git clone https://github.com/tile-fund/lod.git
+#	$ git clone git@github.com:dechristopher/lod.git or git clone https://github.com/dechristopher/lod.git
 #	$ cd lod
 #	$ docker build -t lod .
 #
@@ -52,12 +52,12 @@ RUN adduser \
 	"${USER}"
 
 # Set up source for compilation
-RUN mkdir -p /go/src/github.com/tile-fund/lod
-COPY . /go/src/github.com/tile-fund/lod
+RUN mkdir -p /go/src/github.com/dechristopher/lod
+COPY . /go/src/github.com/dechristopher/lod
 
 # Build binary
-RUN cd /go/src/github.com/tile-fund/lod/cmd/lod \
- 	&& go build -v -ldflags "-w -X 'github.com/tile-fund/lod/config.Version=${VERSION}'" -gcflags "-N -l" -o /opt/lod \
+RUN cd /go/src/github.com/dechristopher/lod/cmd/lod \
+ 	&& go build -v -ldflags "-w -X 'github.com/dechristopher/lod/config.Version=${VERSION}'" -gcflags "-N -l" -o /opt/lod \
 	&& chmod a+x /opt/lod
 
 # ---- Run Stage ----

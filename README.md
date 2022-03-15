@@ -4,35 +4,35 @@
 <p align="center">An intelligent map tile proxy cache for the edge.</p>
 
 <p align="center">
-  <a href="https://github.com/tile-fund/lod/releases/latest" style="text-decoration: none">
-    <img src="https://img.shields.io/github/v/release/tile-fund/lod?style=flat-square" alt="Latest Release">
+  <a href="https://github.com/dechristopher/lod/releases/latest" style="text-decoration: none">
+    <img src="https://img.shields.io/github/v/release/dechristopher/lod?style=flat-square" alt="Latest Release">
   </a>
-  <a href="https://github.com/tile-fund/lod/stargazers" style="text-decoration: none">
-    <img src="https://img.shields.io/github/stars/tile-fund/lod.svg?style=flat-square" alt="Stars">
+  <a href="https://github.com/dechristopher/lod/stargazers" style="text-decoration: none">
+    <img src="https://img.shields.io/github/stars/dechristopher/lod.svg?style=flat-square" alt="Stars">
   </a>
-  <a href="https://github.com/tile-fund/lod/fork" style="text-decoration: none">
-    <img src="https://img.shields.io/github/forks/tile-fund/lod.svg?style=flat-square" alt="Forks">
+  <a href="https://github.com/dechristopher/lod/fork" style="text-decoration: none">
+    <img src="https://img.shields.io/github/forks/dechristopher/lod.svg?style=flat-square" alt="Forks">
   </a>
   <a href="https://opensource.org/licenses/AGPL-3.0" style="text-decoration: none">
     <img src="https://img.shields.io/badge/license-AGPL%20v3-blue.svg?style=flat-square" alt="License: AGPL v3">
   </a>
   <br/>
-  <a href="https://github.com/tile-fund/lod/releases" style="text-decoration: none">
+  <a href="https://github.com/dechristopher/lod/releases" style="text-decoration: none">
     <img src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows-informational?style=for-the-badge" alt="Downloads">
   </a>
   <br/>
-  <a href="https://github.com/tile-fund/lod/actions/workflows/build.yml" style="text-decoration: none">
-    <img src="https://img.shields.io/github/workflow/status/tile-fund/lod/build?style=flat-square" alt="Build Status">
+  <a href="https://github.com/dechristopher/lod/actions/workflows/build.yml" style="text-decoration: none">
+    <img src="https://img.shields.io/github/workflow/status/dechristopher/lod/build?style=flat-square" alt="Build Status">
   </a>
   <a href="https://lod.tile.fund" style="text-decoration: none">
     <img src="https://img.shields.io/badge/docs-here-success?style=flat-square" alt="Docs">
   </a>
-  <a href="https://goreportcard.com/report/github.com/tile-fund/lod" style="text-decoration: none">
+  <a href="https://goreportcard.com/report/github.com/dechristopher/lod" style="text-decoration: none">
     <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
   </a>
   <br/>
-  <a href="https://codecov.io/gh/tile-fund/lod">
-    <img src="https://img.shields.io/codecov/c/gh/tile-fund/lod?color=magenta&logo=codecov&style=flat-square" alt="Coverage"/>
+  <a href="https://codecov.io/gh/dechristopher/lod">
+    <img src="https://img.shields.io/codecov/c/gh/dechristopher/lod?color=magenta&logo=codecov&style=flat-square" alt="Coverage"/>
   </a>
 </p>
 
@@ -51,7 +51,7 @@ library by [allegro](https://github.com/allegro).
 ## Getting Started
 Download a build from the releases page or just run:
 ```bash
-$ go install github.com/tile-fund/lod@latest
+$ go install github.com/dechristopher/lod@latest
 ```
 
 **NOTE: You'll need the GEOS library installed on your system to use some of
@@ -108,7 +108,7 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
   - [X] Configurable headers to inject into upstream tileserver requests
   - [X] `Content-Type` and `Content-Encoding` added by default
 - [ ] Internal stats tracking
-  - [ ] Hits, misses, hit-rate
+  - [X] Hits, misses, hit-rate
   - [ ] Tiles per second (load averages)
   - [ ] Tile upstream fetch times (avg, 75th, 99th)
   - [X] Expose Prometheus endpoint
@@ -132,7 +132,7 @@ A more verbose version of this config actually used for internal testing can be
 found at [config.toml.example](config.toml.example) in the root of the repo.
 
 More detailed information about configuring LOD and hardening it for production
-use can be found at [our documentation site](https://lod.tile.fund/configuration/reference-guide).
+use can be found by reading the [source code](config/config.go).
 
 ```toml
 [instance]

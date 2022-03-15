@@ -6,8 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/tile"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/tile"
 )
 
 // GetTile computes the tile from the request URL

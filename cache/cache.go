@@ -10,10 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/env"
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/env"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
 )
 
 var Subsystem = "cache"

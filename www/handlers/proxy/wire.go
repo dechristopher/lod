@@ -3,10 +3,10 @@ package proxy
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
-	"github.com/tile-fund/lod/www/middleware"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
+	"github.com/dechristopher/lod/www/middleware"
 )
 
 // Wire proxy group and endpoints for each configured proxy

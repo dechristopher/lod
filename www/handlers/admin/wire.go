@@ -5,8 +5,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/www/middleware"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/www/middleware"
 )
 
 // Wire admin group and endpoint handlers

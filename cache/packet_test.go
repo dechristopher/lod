@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/tile-fund/lod/str"
+	"github.com/dechristopher/lod/str"
 )
 
 // TestEncode will test that a given tile and metadata encodes properly

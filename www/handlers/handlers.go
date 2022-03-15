@@ -4,10 +4,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/www/handlers/admin"
-	"github.com/tile-fund/lod/www/handlers/proxy"
-	"github.com/tile-fund/lod/www/middleware"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/www/handlers/admin"
+	"github.com/dechristopher/lod/www/handlers/proxy"
+	"github.com/dechristopher/lod/www/middleware"
 )
 
 // Wire builds all the websocket and http routes

@@ -8,8 +8,8 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/env"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/env"
 )
 
 // Wire attaches all middleware to the given router

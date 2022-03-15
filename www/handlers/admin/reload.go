@@ -3,9 +3,9 @@ package admin
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
 )
 
 // ReloadCapabilities performs a config reload, picking up any

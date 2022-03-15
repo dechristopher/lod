@@ -12,11 +12,11 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/gofiber/fiber/v2"
-	"github.com/tile-fund/lod/tile"
+	"github.com/dechristopher/lod/tile"
 
-	"github.com/tile-fund/lod/env"
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/env"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
 )
 
 var (

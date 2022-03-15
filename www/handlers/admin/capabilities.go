@@ -3,7 +3,7 @@ package admin
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/tile-fund/lod/config"
+	"github.com/dechristopher/lod/config"
 )
 
 // Capabilities returns the JSON formatted output of the current

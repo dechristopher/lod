@@ -5,8 +5,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
 )
 
 // Encode tile data and metadata into a TilePacket

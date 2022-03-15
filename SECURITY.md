@@ -14,4 +14,4 @@ checks that could impact a user's system or infrastructure, please let us know.
 
 Email one of our maintainers directly using contact information found in their profiles.
 Prioritize Andrew DeChristopher <me@dchr.host>. For non-critical issues, please just open
-an issue or a PR with a fix and we'll be right on it.
+an issue or a PR with a fix, and we'll be right on it.

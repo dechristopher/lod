@@ -8,7 +8,7 @@ import (
 
 	"github.com/allegro/bigcache/v3"
 
-	"github.com/tile-fund/lod/str"
+	"github.com/dechristopher/lod/str"
 )
 
 //go:embed data/test.pbf

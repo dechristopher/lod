@@ -2,8 +2,8 @@ package admin
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/tile-fund/lod/cache"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/cache"
+	"github.com/dechristopher/lod/util"
 )
 
 type stats struct {

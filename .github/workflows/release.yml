@@ -53,7 +53,7 @@ jobs:
           GOOS: linux
         run: |
           cd cmd/lod
-          go build -mod vendor -ldflags "-w -X 'github.com/tile-fund/lod/config.Version=${VERSION}'"
+          go build -mod vendor -ldflags "-w -X 'github.com/dechristopher/lod/config.Version=${VERSION}'"
 
       # workaround for archives losing permissions
       # https://github.com/actions/upload-artifact/issues/38
@@ -109,7 +109,7 @@ jobs:
           GOOS: darwin
         run: |
           cd cmd/lod
-          go build -mod vendor -ldflags "-w -X 'github.com/tile-fund/lod/config.Version=${VERSION}'"
+          go build -mod vendor -ldflags "-w -X 'github.com/dechristopher/lod/config.Version=${VERSION}'"
 
       # workaround for archives losing permissions
       # https://github.com/actions/upload-artifact/issues/38
@@ -161,12 +161,12 @@ jobs:
           docker tag lod:latest ${DH_ORG}/${DH_REPO}:${VERSION}
           docker tag lod:latest ${DH_ORG}/${DH_REPO}:latest
 
-      - name: Publish Docker container
-        if: github.event_name == 'release'
-        env:
-          DH_USER: ${{ secrets.DH_USER }}
-          DH_PASSWORD: ${{ secrets.DH_PASSWORD }}
-        run: |
-          echo ${DH_PASSWORD} | docker login -u ${DH_USER} --password-stdin
-          docker push ${DH_ORG}/${DH_REPO}:${VERSION}
-          docker push ${DH_ORG}/${DH_REPO}:latest
+#      - name: Publish Docker container
+#        if: github.event_name == 'release'
+#        env:
+#          DH_USER: ${{ secrets.DH_USER }}
+#          DH_PASSWORD: ${{ secrets.DH_PASSWORD }}
+#        run: |
+#          echo ${DH_PASSWORD} | docker login -u ${DH_USER} --password-stdin
+#          docker push ${DH_ORG}/${DH_REPO}:${VERSION}
+#          docker push ${DH_ORG}/${DH_REPO}:latest

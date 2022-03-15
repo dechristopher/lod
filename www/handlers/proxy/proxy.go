@@ -6,13 +6,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
-	"github.com/tile-fund/lod/tile"
+	"github.com/dechristopher/lod/tile"
 
-	"github.com/tile-fund/lod/cache"
-	"github.com/tile-fund/lod/config"
-	"github.com/tile-fund/lod/helpers"
-	"github.com/tile-fund/lod/str"
-	"github.com/tile-fund/lod/util"
+	"github.com/dechristopher/lod/cache"
+	"github.com/dechristopher/lod/config"
+	"github.com/dechristopher/lod/helpers"
+	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/util"
 )
 
 type tileError struct {

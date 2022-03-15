@@ -1,4 +1,4 @@
-module github.com/tile-fund/lod
+module github.com/dechristopher/lod
 
 go 1.17
 
