@@ -77,7 +77,7 @@ func Get(name string) *Cache {
 
 				var external *redis.Client
 
-				if proxy.Cache.RedisURL != "" {
+				if proxy.Cache.RedisEnabled {
 					opts, err := redis.ParseURL(proxy.Cache.RedisURL)
 					if err != nil {
 						util.Error(str.CCache, str.ECacheCreate, err.Error())
@@ -90,8 +90,6 @@ func Get(name string) *Cache {
 						util.Error(str.CCache, str.ECacheCreate, err.Error())
 						return nil
 					}
-
-					proxy.Cache.RedisEnabled = true
 				}
 
 				cacheHits := promauto.NewCounter(prometheus.CounterOpts{
@@ -175,7 +173,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 		hit = " :hit-i"
 	}
 
-	if cachedTile == nil && c.external != nil {
+	if cachedTile == nil && c.Proxy.Cache.RedisEnabled {
 		// try fetching from redis if not present in internal cache
 		redisTile := c.external.Get(context.Background(), key)
 		if redisTile.Err() != nil {
@@ -212,7 +210,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 		return nil
 	}
 
-	ctx.Locals("tp-cache", hit)
+	ctx.Locals("lod-cache", hit)
 	c.Metrics.CacheHits.Inc()
 
 	// wrap bytes in TilePacket container
@@ -248,7 +246,7 @@ func (c *Cache) EncodeSet(key string, tileData []byte, headers map[string]string
 // Set the tile in all cache levels with the configured TTLs
 func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
 	util.DebugFlag("cache", str.CCache, str.DCacheSet, key, len(tile))
-	if (len(internalOnly) == 0 || !internalOnly[0]) && c.external != nil {
+	if (len(internalOnly) == 0 || !internalOnly[0]) && c.Proxy.Cache.RedisEnabled {
 		go func() {
 			status := c.external.Set(context.Background(), key,
 				tile.Raw(), c.Proxy.Cache.RedisTTLDuration)
@@ -277,7 +275,7 @@ func (c *Cache) Invalidate(key string) error {
 		}
 	}
 
-	if c.external != nil {
+	if c.Proxy.Cache.RedisEnabled {
 		status := c.external.Del(context.Background(), key)
 		if status.Err() != nil {
 			return status.Err()

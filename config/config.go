@@ -304,8 +304,13 @@ func validateProxy(num int, proxy *Proxy) error {
 
 // validateCache will validate a proxy endpoint's cache configuration
 func validateCache(proxy *Proxy) error {
+
+	if proxy.Cache.MemCap > 0 || proxy.Cache.MemTTL != "" {
+		proxy.Cache.MemEnabled = true
+	}
+
 	// parse in-memory cache parameters if enabled
-	if !proxy.Cache.MemEnabled {
+	if proxy.Cache.MemEnabled {
 		if proxy.Cache.MemCap < 1 {
 			return ErrInvalidMemCap{ProxyName: proxy.Name}
 		}
@@ -321,15 +326,21 @@ func validateCache(proxy *Proxy) error {
 		proxy.Cache.MemTTLDuration = memTTL
 	}
 
-	redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
-	if err != nil {
-		return ErrInvalidRedisTTL{
-			ProxyName: proxy.Name,
-			TTL:       proxy.Cache.MemTTL,
-		}
+	if proxy.Cache.RedisURL != "" {
+		proxy.Cache.RedisEnabled = true
 	}
 
-	proxy.Cache.RedisTTLDuration = redisTTL
+	if proxy.Cache.RedisEnabled {
+		redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
+		if err != nil {
+			return ErrInvalidRedisTTL{
+				ProxyName: proxy.Name,
+				TTL:       proxy.Cache.MemTTL,
+			}
+		}
+
+		proxy.Cache.RedisTTLDuration = redisTTL
+	}
 
 	if !strings.Contains(proxy.Cache.KeyTemplate, "{z}") {
 		return ErrMissingCacheTemplate{
