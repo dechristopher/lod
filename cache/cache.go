@@ -50,105 +50,128 @@ const OneMB = 1024 * 1024
 // Get a cache instance by name
 func Get(name string) *Cache {
 	if Caches[name] == nil {
-		if cacheLock == nil {
-			cacheLock = &sync.Mutex{}
-		}
-
-		cacheLock.Lock()
-		defer cacheLock.Unlock()
-		// find and populate a new cache instance for the given name
-		for _, proxy := range config.Get().Proxies {
-			if proxy.Name == name {
-				var internal *bigcache.BigCache
-				var err error
-
-				if proxy.Cache.MemEnabled {
-					conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
-					conf.StatsEnabled = !env.IsProd()
-					conf.MaxEntrySize = 1024 * 10 // 100KB
-					conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
-
-					internal, err = bigcache.NewBigCache(conf)
-					if err != nil {
-						util.Error(str.CCache, str.ECacheCreate, err.Error())
-						return nil
-					}
-				}
-
-				var external *redis.Client
-
-				if proxy.Cache.RedisEnabled {
-					opts, err := redis.ParseURL(proxy.Cache.RedisURL)
-					if err != nil {
-						util.Error(str.CCache, str.ECacheCreate, err.Error())
-						return nil
-					}
-					external = redis.NewClient(opts)
-
-					_, err = external.Ping(context.Background()).Result()
-					if err != nil {
-						util.Error(str.CCache, str.ECacheCreate, err.Error())
-						return nil
-					}
-				}
-
-				cacheHits := promauto.NewCounter(prometheus.CounterOpts{
-					Namespace: config.Namespace,
-					Subsystem: Subsystem,
-					Name:      "hit_total",
-					ConstLabels: map[string]string{
-						"proxy": proxy.Name,
-					},
-					Help: "The total number of cache hits",
-				})
-
-				cacheMisses := promauto.NewCounter(prometheus.CounterOpts{
-					Namespace: config.Namespace,
-					Subsystem: Subsystem,
-					Name:      "miss_total",
-					ConstLabels: map[string]string{
-						"proxy": proxy.Name,
-					},
-					Help: "The total number of cache misses",
-				})
-
-				hitRate := promauto.NewCounterFunc(prometheus.CounterOpts{
-					Namespace: config.Namespace,
-					Subsystem: Subsystem,
-					Name:      "hit_rate",
-					ConstLabels: map[string]string{
-						"proxy": proxy.Name,
-					},
-					Help: "The rate of hits to misses",
-				}, func() float64 {
-					hits := util.GetMetricValue(cacheHits)
-					misses := util.GetMetricValue(cacheMisses)
-					return hits / (hits + misses)
-				})
-
-				metrics := &Metrics{
-					CacheHits:   cacheHits,
-					CacheMisses: cacheMisses,
-					HitRate:     hitRate,
-				}
-
-				util.DebugFlag("cache", str.CCache, str.DCacheUp, name)
-
-				Caches[name] = &Cache{
-					internal: internal,
-					external: external,
-					Proxy:    &proxy,
-					Metrics:  metrics,
-				}
-
-				return Caches[name]
-			}
-		}
-		// if this happens, there's an edge case somewhere
-		util.Error(str.CCache, str.ECacheName, name)
+		return buildInstance(name)
 	}
 
 	return Caches[name]
+}
+
+// buildInstance will build a cache instance by name
+func buildInstance(name string) *Cache {
+	if cacheLock == nil {
+		cacheLock = &sync.Mutex{}
+	}
+
+	cacheLock.Lock()
+	defer cacheLock.Unlock()
+	// find and populate a new cache instance for the given name
+	for _, proxy := range config.Get().Proxies {
+		if proxy.Name == name {
+			var internal *bigcache.BigCache
+			var external *redis.Client
+			var err error
+
+			if proxy.Cache.MemEnabled {
+				internal, err = initInternal(proxy)
+				if err != nil {
+					util.Error(str.CCache, str.ECacheCreate, err.Error())
+					return nil
+				}
+			}
+
+			if proxy.Cache.RedisEnabled {
+				external, err = initExternal(proxy)
+				if err != nil {
+					util.Error(str.CCache, str.ECacheCreate, err.Error())
+					return nil
+				}
+			}
+
+			// initialize metrics for this cache instance
+			metrics := initMetrics(proxy)
+
+			util.DebugFlag("cache", str.CCache, str.DCacheUp, name)
+
+			Caches[name] = &Cache{
+				internal: internal,
+				external: external,
+				Proxy:    &proxy,
+				Metrics:  metrics,
+			}
+
+			return Caches[name]
+		}
+	}
+	// if this happens, there's an edge case somewhere
+	util.Error(str.CCache, str.ECacheName, name)
+	return nil
+}
+
+// initInternal initializes an in-memory cache instance from proxy configuration
+func initInternal(proxy config.Proxy) (*bigcache.BigCache, error) {
+	conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
+	conf.StatsEnabled = !env.IsProd()
+	conf.MaxEntrySize = 1024 * 10 // 100KB
+	conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
+
+	return bigcache.NewBigCache(conf)
+}
+
+// initExternal initializes an external cache instance from proxy configuration
+func initExternal(proxy config.Proxy) (*redis.Client, error) {
+	opts, err := redis.ParseURL(proxy.Cache.RedisURL)
+	if err != nil {
+		util.Error(str.CCache, str.ECacheCreate, err.Error())
+		return nil, err
+	}
+	external := redis.NewClient(opts)
+
+	_, err = external.Ping(context.Background()).Result()
+
+	return external, err
+}
+
+// initMetrics for the given proxy configuration
+func initMetrics(proxy config.Proxy) *Metrics {
+	cacheHits := promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: config.Namespace,
+		Subsystem: Subsystem,
+		Name:      "hit_total",
+		ConstLabels: map[string]string{
+			"proxy": proxy.Name,
+		},
+		Help: "The total number of cache hits",
+	})
+
+	cacheMisses := promauto.NewCounter(prometheus.CounterOpts{
+		Namespace: config.Namespace,
+		Subsystem: Subsystem,
+		Name:      "miss_total",
+		ConstLabels: map[string]string{
+			"proxy": proxy.Name,
+		},
+		Help: "The total number of cache misses",
+	})
+
+	hitRate := promauto.NewCounterFunc(prometheus.CounterOpts{
+		Namespace: config.Namespace,
+		Subsystem: Subsystem,
+		Name:      "hit_rate",
+		ConstLabels: map[string]string{
+			"proxy": proxy.Name,
+		},
+		Help: "The rate of hits to misses",
+	}, func() float64 {
+		hits := util.GetMetricValue(cacheHits)
+		misses := util.GetMetricValue(cacheMisses)
+		return hits / (hits + misses)
+	})
+
+	return &Metrics{
+		CacheHits:   cacheHits,
+		CacheMisses: cacheMisses,
+		HitRate:     hitRate,
+	}
 }
 
 // Fetch will attempt to grab a tile by key from any of the cache layers,
@@ -246,6 +269,8 @@ func (c *Cache) EncodeSet(key string, tileData []byte, headers map[string]string
 // Set the tile in all cache levels with the configured TTLs
 func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
 	util.DebugFlag("cache", str.CCache, str.DCacheSet, key, len(tile))
+
+	// set in external cache if enabled and allowed
 	if (len(internalOnly) == 0 || !internalOnly[0]) && c.Proxy.Cache.RedisEnabled {
 		go func() {
 			status := c.external.Set(context.Background(), key,
