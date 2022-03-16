@@ -13,7 +13,7 @@ import (
 func Wire(r *fiber.App) {
 	for _, p := range config.Get().Proxies {
 		wireProxy(r, p)
-		util.Info(str.CMain, str.MProxy, p.Name, p.TileURL)
+		util.Info(str.CMain, str.MProxy, p.Cache.MemEnabled, p.Cache.RedisEnabled, p.Name, p.TileURL)
 	}
 }
 

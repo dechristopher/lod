@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/gofiber/fiber/v2"
 	"github.com/dechristopher/lod/tile"
+	"github.com/gofiber/fiber/v2"
 
 	"github.com/dechristopher/lod/env"
 	"github.com/dechristopher/lod/str"
@@ -79,9 +79,11 @@ type Param struct {
 // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 // For example: 1h, 300s, 1000ms, 2h35m, etc.
 type Cache struct {
-	MemCap         int           `json:"mem_cap" toml:"mem_cap"` // maximum capacity in MB of the in-memory cache
-	MemTTL         string        `json:"mem_ttl" toml:"mem_ttl"` // in-memory cache TTL, ex: 1h, 30s, 1000ms, etc
-	MemTTLDuration time.Duration `json:"-" toml:"-"`             // parsed duration from MemTTL
+	MemEnabled     bool          `json:"mem_enabled" toml:"mem_enable"` // whether the in-memory cache is enabled
+	MemCap         int           `json:"mem_cap" toml:"mem_cap"`        // maximum capacity in MB of the in-memory cache
+	MemTTL         string        `json:"mem_ttl" toml:"mem_ttl"`        // in-memory cache TTL, ex: 1h, 30s, 1000ms, etc
+	MemTTLDuration time.Duration `json:"-" toml:"-"`                    // parsed duration from MemTTL
+	RedisEnabled   bool          `json:"redis_enabled" toml:"-"`        // used internally to track presence of Redis configuration
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
 	RedisTTL         string        `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL, ex: 1h, 30s, 1000ms, etc
@@ -239,7 +241,7 @@ func validateProxy(num int, proxy *Proxy) error {
 		return ErrProxyNoName{Number: num + 1}
 	}
 
-	matched, err := regexp.Match("^[a-zA-Z0-9_]+$", []byte(proxy.Name))
+	matched, err := regexp.Match("^[a-zA-Z0-9_-]+$", []byte(proxy.Name))
 	if err != nil {
 		return ErrProxyName{
 			Number: num + 1,
@@ -250,6 +252,12 @@ func validateProxy(num int, proxy *Proxy) error {
 	if !matched {
 		return ErrProxyInvalidName{
 			Number:    num + 1,
+			ProxyName: proxy.Name,
+		}
+	}
+
+	if proxy.TileURL == "" {
+		return ErrMissingTileURL{
 			ProxyName: proxy.Name,
 		}
 	}
@@ -296,19 +304,22 @@ func validateProxy(num int, proxy *Proxy) error {
 
 // validateCache will validate a proxy endpoint's cache configuration
 func validateCache(proxy *Proxy) error {
-	if proxy.Cache.MemCap < 1 {
-		return ErrInvalidMemCap{ProxyName: proxy.Name}
-	}
-
-	memTTL, err := time.ParseDuration(proxy.Cache.MemTTL)
-	if err != nil {
-		return ErrInvalidMemTTL{
-			ProxyName: proxy.Name,
-			TTL:       proxy.Cache.MemTTL,
+	// parse in-memory cache parameters if enabled
+	if !proxy.Cache.MemEnabled {
+		if proxy.Cache.MemCap < 1 {
+			return ErrInvalidMemCap{ProxyName: proxy.Name}
 		}
-	}
 
-	proxy.Cache.MemTTLDuration = memTTL
+		memTTL, err := time.ParseDuration(proxy.Cache.MemTTL)
+		if err != nil {
+			return ErrInvalidMemTTL{
+				ProxyName: proxy.Name,
+				TTL:       proxy.Cache.MemTTL,
+			}
+		}
+
+		proxy.Cache.MemTTLDuration = memTTL
+	}
 
 	redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
 	if err != nil {

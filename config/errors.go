@@ -62,8 +62,19 @@ type ErrProxyInvalidName struct {
 
 // Error returns the string representation of ErrProxyInvalidName
 func (e ErrProxyInvalidName) Error() string {
-	return fmt.Sprintf("config:proxy(#%d) name '%s' may only contain alphanumerics and underscores",
+	return fmt.Sprintf("config:proxy(#%d) name '%s' may only contain alphanumerics, dashes, and underscores",
 		e.Number, e.ProxyName)
+}
+
+// ErrMissingTileURL is an error struct for a proxy cache that is
+// configured without a TileURL
+type ErrMissingTileURL struct {
+	ProxyName string
+}
+
+// Error returns the string representation of ErrMissingTileURL
+func (e ErrMissingTileURL) Error() string {
+	return fmt.Sprintf("config:proxy(%s) tile URL empty or not specified", e.ProxyName)
 }
 
 // ErrMissingTileURLTemplate is an error struct for a proxy cache key template

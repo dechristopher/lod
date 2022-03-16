@@ -32,7 +32,7 @@ const (
 // (E) Error messages
 const (
 	ELogFail            = "failed to log, error=%s msg=%+v"
-	EConfig             = "failed to read config file, error=%s"
+	EConfig             = "failed to read config file: %s"
 	EConfigNotFound     = "config file not found at path: '%s'"
 	EConfigPort         = "port override in env is invalid, env=%s err=%s"
 	EBadRequest         = "failed to fetch URL parameters, error=%s"
@@ -61,7 +61,7 @@ const (
 	MDevMode            = "!! DEVELOPER MODE !!"
 	MInit               = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
 	MStarted            = "started in %s [env: %s][http: %d]"
-	MProxy              = "configured proxy [%s] -> %s"
+	MProxy              = "configured proxy [mem: %t / redis: %t][%s] -> %s"
 	MReload             = "reloaded instance capabilities"
 	MInvalidateTile     = "invalidated tile %s with no depth (%d) (%d tiles)"
 	MInvalidateTileDeep = "invalidated tile %s with depth %d (%d tiles)"

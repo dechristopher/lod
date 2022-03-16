@@ -59,15 +59,20 @@ func Get(name string) *Cache {
 		// find and populate a new cache instance for the given name
 		for _, proxy := range config.Get().Proxies {
 			if proxy.Name == name {
-				conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
-				conf.StatsEnabled = !env.IsProd()
-				conf.MaxEntrySize = 1024 * 10 // 100KB
-				conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
+				var internal *bigcache.BigCache
+				var err error
 
-				internal, err := bigcache.NewBigCache(conf)
-				if err != nil {
-					util.Error(str.CCache, str.ECacheCreate, err.Error())
-					return nil
+				if proxy.Cache.MemEnabled {
+					conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
+					conf.StatsEnabled = !env.IsProd()
+					conf.MaxEntrySize = 1024 * 10 // 100KB
+					conf.HardMaxCacheSize = OneMB * proxy.Cache.MemCap
+
+					internal, err = bigcache.NewBigCache(conf)
+					if err != nil {
+						util.Error(str.CCache, str.ECacheCreate, err.Error())
+						return nil
+					}
 				}
 
 				var external *redis.Client
@@ -85,6 +90,8 @@ func Get(name string) *Cache {
 						util.Error(str.CCache, str.ECacheCreate, err.Error())
 						return nil
 					}
+
+					proxy.Cache.RedisEnabled = true
 				}
 
 				cacheHits := promauto.NewCounter(prometheus.CounterOpts{
@@ -149,17 +156,24 @@ func Get(name string) *Cache {
 // Fetch will attempt to grab a tile by key from any of the cache layers,
 // populating higher layers of the cache if found.
 func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
-	cachedTile, err := c.internal.Get(key)
-	if err != nil {
-		if err == bigcache.ErrEntryNotFound {
-			util.DebugFlag("cache", str.CCache, str.DCacheMiss, key)
-		} else {
-			util.Error(str.CCache, str.ECacheFetch, key, err.Error())
-			return nil
-		}
-	}
+	var cachedTile []byte
+	var err error
+	var hit string
 
-	hit := " :hit-i"
+	// fetch from in-memory cache if enabled
+	if c.Proxy.Cache.MemEnabled {
+		cachedTile, err = c.internal.Get(key)
+		if err != nil {
+			if err == bigcache.ErrEntryNotFound {
+				util.DebugFlag("cache", str.CCache, str.DCacheMiss, key)
+			} else {
+				util.Error(str.CCache, str.ECacheFetch, key, err.Error())
+				return nil
+			}
+		}
+
+		hit = " :hit-i"
+	}
 
 	if cachedTile == nil && c.external != nil {
 		// try fetching from redis if not present in internal cache
@@ -198,7 +212,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 		return nil
 	}
 
-	ctx.Locals("lod-cache", hit)
+	ctx.Locals("tp-cache", hit)
 	c.Metrics.CacheHits.Inc()
 
 	// wrap bytes in TilePacket container
@@ -243,17 +257,24 @@ func (c *Cache) Set(key string, tile TilePacket, internalOnly ...bool) {
 			}
 		}()
 	}
-	err := c.internal.Set(key, tile)
-	if err != nil {
-		util.Error(str.CCache, str.ECacheSet, key, err.Error())
+
+	// set in the in-memory cache if enabled
+	if c.Proxy.Cache.MemEnabled {
+		err := c.internal.Set(key, tile)
+		if err != nil {
+			util.Error(str.CCache, str.ECacheSet, key, err.Error())
+		}
 	}
 }
 
 // Invalidate a tile by key from all cache levels
 func (c *Cache) Invalidate(key string) error {
-	err := c.internal.Delete(key)
-	if err != nil && err != bigcache.ErrEntryNotFound {
-		return err
+	// invalidate from in-memory cache if enabled
+	if c.Proxy.Cache.MemEnabled {
+		err := c.internal.Delete(key)
+		if err != nil && err != bigcache.ErrEntryNotFound {
+			return err
+		}
 	}
 
 	if c.external != nil {
@@ -268,9 +289,15 @@ func (c *Cache) Invalidate(key string) error {
 
 // Flush the internal bigcache instance
 func (c *Cache) Flush() error {
-	return c.internal.Reset()
+	if c.Proxy.Cache.MemEnabled {
+		return c.internal.Reset()
+	}
+	return nil
 }
 
 func (c *Cache) Stats() bigcache.Stats {
-	return c.internal.Stats()
+	if c.Proxy.Cache.MemEnabled {
+		return c.internal.Stats()
+	}
+	return bigcache.Stats{}
 }
