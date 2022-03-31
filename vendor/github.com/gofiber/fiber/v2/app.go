@@ -2,22 +2,23 @@
 // 🤖 Github Repository: https://github.com/gofiber/fiber
 // 📌 API Documentation: https://docs.gofiber.io
 
-// Package fiber
-// Fiber is an Express inspired web framework built on top of Fasthttp,
+// Package fiber is an Express inspired web framework built on top of Fasthttp,
 // the fastest HTTP engine for Go. Designed to ease things up for fast
 // development with zero memory allocation and performance in mind.
-
 package fiber
 
 import (
 	"bufio"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"sort"
@@ -36,7 +37,7 @@ import (
 )
 
 // Version of current fiber package
-const Version = "2.24.0"
+const Version = "2.31.0"
 
 // Handler defines a function to serve HTTP requests.
 type Handler = func(*Ctx) error
@@ -48,13 +49,13 @@ type Map map[string]interface{}
 // providers
 type Storage interface {
 	// Get gets the value for the given key.
-	// It returns ErrNotFound if the storage does not contain the key.
+	// `nil, nil` is returned when the key does not exist
 	Get(key string) ([]byte, error)
 
-	// Set stores the given value for the given key along with a
-	// time-to-live expiration value, 0 means live for ever
+	// Set stores the given value for the given key along
+	// with an expiration value, 0 means no expiration.
 	// Empty key or value will be ignored without an error.
-	Set(key string, val []byte, ttl time.Duration) error
+	Set(key string, val []byte, exp time.Duration) error
 
 	// Delete deletes the value for the given key.
 	// It returns no error if the storage does not contain the key,
@@ -111,8 +112,13 @@ type App struct {
 	getBytes func(s string) (b []byte)
 	// Converts byte slice to a string
 	getString func(b []byte) string
-	// mount prefix -> error handler
-	errorHandlers map[string]ErrorHandler
+	// Mounted and main apps
+	appList map[string]*App
+	// Hooks
+	hooks *hooks
+	// Latest route & group
+	latestRoute *Route
+	latestGroup *Group
 }
 
 // Config is a struct holding the server settings.
@@ -182,6 +188,11 @@ type Config struct {
 	//
 	// Default: ""
 	ViewsLayout string `json:"views_layout"`
+
+	// PassLocalsToViews Enables passing of the locals set on a fiber.Ctx to the template engine
+	//
+	// Default: false
+	PassLocalsToViews bool `json:"pass_locals_to_views"`
 
 	// The amount of time allowed to read the full request including body.
 	// It is reset after the request handler has returned.
@@ -315,7 +326,7 @@ type Config struct {
 	// When set by an external client of Fiber it will use the provided implementation of a
 	// JSONUnmarshal
 	//
-	// Allowing for flexibility in using another json library for encoding
+	// Allowing for flexibility in using another json library for decoding
 	// Default: json.Unmarshal
 	JSONDecoder utils.JSONUnmarshal `json:"-"`
 
@@ -354,9 +365,9 @@ type Config struct {
 	trustedProxiesMap  map[string]struct{}
 	trustedProxyRanges []*net.IPNet
 
-	//If set to true, will print all routes with their method, path and handler.
+	// If set to true, will print all routes with their method, path and handler.
 	// Default: false
-	EnablePrintRoutes bool `json:"print_routes"`
+	EnablePrintRoutes bool `json:"enable_print_routes"`
 }
 
 // Static defines configuration options when defining static assets.
@@ -373,6 +384,10 @@ type Static struct {
 	// When set to true, enables directory browsing.
 	// Optional. Default value false.
 	Browse bool `json:"browse"`
+
+	// When set to true, enables direct download.
+	// Optional. Default value false.
+	Download bool `json:"download"`
 
 	// The name of the index file for serving a directory.
 	// Optional. Default value "index.html".
@@ -413,14 +428,6 @@ const (
 	DefaultCompressedFileSuffix = ".fiber.gz"
 )
 
-// Variables for Name & GetRoute
-var latestRoute struct {
-	route *Route
-	mu    sync.Mutex
-}
-
-var latestGroup Group
-
 // DefaultErrorHandler that process return errors from handlers
 var DefaultErrorHandler = func(c *Ctx, err error) error {
 	code := StatusInternalServerError
@@ -451,11 +458,17 @@ func New(config ...Config) *App {
 			},
 		},
 		// Create config
-		config:        Config{},
-		getBytes:      utils.UnsafeBytes,
-		getString:     utils.UnsafeString,
-		errorHandlers: make(map[string]ErrorHandler),
+		config:      Config{},
+		getBytes:    utils.UnsafeBytes,
+		getString:   utils.UnsafeString,
+		appList:     make(map[string]*App),
+		latestRoute: &Route{},
+		latestGroup: &Group{},
 	}
+
+	// Define hooks
+	app.hooks = newHooks(app)
+
 	// Override config if provided
 	if len(config) > 0 {
 		app.config = config[0]
@@ -506,6 +519,9 @@ func New(config ...Config) *App {
 		app.handleTrustedProxy(ipAddress)
 	}
 
+	// Init appList
+	app.appList[""] = app
+
 	// Init app
 	app.init()
 
@@ -535,6 +551,7 @@ func (app *App) handleTrustedProxy(ipAddress string) {
 // to be invoked on errors that happen within the prefix route.
 func (app *App) Mount(prefix string, fiber *App) Router {
 	stack := fiber.Stack()
+	prefix = strings.TrimRight(prefix, "/")
 	for m := range stack {
 		for r := range stack[m] {
 			route := app.copyRoute(stack[m][r])
@@ -542,13 +559,10 @@ func (app *App) Mount(prefix string, fiber *App) Router {
 		}
 	}
 
-	// Save the fiber's error handler and its sub apps
-	prefix = strings.TrimRight(prefix, "/")
-	if fiber.config.ErrorHandler != nil {
-		app.errorHandlers[prefix] = fiber.config.ErrorHandler
-	}
-	for mountedPrefixes, errHandler := range fiber.errorHandlers {
-		app.errorHandlers[prefix+mountedPrefixes] = errHandler
+	// Support for configs of mounted-apps and sub-mounted-apps
+	for mountedPrefixes, subApp := range fiber.appList {
+		app.appList[prefix+mountedPrefixes] = subApp
+		subApp.init()
 	}
 
 	atomic.AddUint32(&app.handlersCount, fiber.handlersCount)
@@ -558,11 +572,17 @@ func (app *App) Mount(prefix string, fiber *App) Router {
 
 // Assign name to specific route.
 func (app *App) Name(name string) Router {
-	if strings.HasPrefix(latestRoute.route.path, latestGroup.prefix) {
-		latestRoute.route.Name = latestGroup.name + name
+	app.mutex.Lock()
+	if strings.HasPrefix(app.latestRoute.path, app.latestGroup.Prefix) {
+		app.latestRoute.Name = app.latestGroup.name + name
 	} else {
-		latestRoute.route.Name = name
+		app.latestRoute.Name = name
 	}
+
+	if err := app.hooks.executeOnNameHooks(*app.latestRoute); err != nil {
+		panic(err)
+	}
+	app.mutex.Unlock()
 
 	return app
 }
@@ -690,7 +710,27 @@ func (app *App) Group(prefix string, handlers ...Handler) Router {
 	if len(handlers) > 0 {
 		app.register(methodUse, prefix, handlers...)
 	}
-	return &Group{prefix: prefix, app: app}
+	grp := &Group{Prefix: prefix, app: app}
+	if err := app.hooks.executeOnGroupHooks(*grp); err != nil {
+		panic(err)
+	}
+
+	return grp
+}
+
+// Route is used to define routes with a common prefix inside the common function.
+// Uses Group method to define new sub-router.
+func (app *App) Route(prefix string, fn func(router Router), name ...string) Router {
+	// Create new group
+	group := app.Group(prefix)
+	if len(name) > 0 {
+		group.Name(name[0])
+	}
+
+	// Define routes
+	fn(group)
+
+	return group
 }
 
 // Error makes it compatible with the `error` interface.
@@ -700,15 +740,14 @@ func (e *Error) Error() string {
 
 // NewError creates a new Error instance with an optional message
 func NewError(code int, message ...string) *Error {
-	e := &Error{
-		Code: code,
+	err := &Error{
+		Code:    code,
+		Message: utils.StatusMessage(code),
 	}
 	if len(message) > 0 {
-		e.Message = message[0]
-	} else {
-		e.Message = utils.StatusMessage(code)
+		err.Message = message[0]
 	}
-	return e
+	return err
 }
 
 // Listener can be used to pass a custom listener.
@@ -777,8 +816,7 @@ func (app *App) ListenTLS(addr, certFile, keyFile string) error {
 			return fmt.Errorf("tls: cannot load TLS key pair from certFile=%q and keyFile=%q: %s", certFile, keyFile, err)
 		}
 		config := &tls.Config{
-			MinVersion:               tls.VersionTLS12,
-			PreferServerCipherSuites: true,
+			MinVersion: tls.VersionTLS12,
 			Certificates: []tls.Certificate{
 				cert,
 			},
@@ -802,6 +840,66 @@ func (app *App) ListenTLS(addr, certFile, keyFile string) error {
 	}
 	// Start listening
 	return app.server.ServeTLS(ln, certFile, keyFile)
+}
+
+// ListenMutualTLS serves HTTPs requests from the given addr.
+// certFile, keyFile and clientCertFile are the paths to TLS certificate and key file.
+
+//  app.ListenMutualTLS(":8080", "./cert.pem", "./cert.key", "./client.pem")
+//  app.ListenMutualTLS(":8080", "./cert.pem", "./cert.key", "./client.pem")
+func (app *App) ListenMutualTLS(addr, certFile, keyFile, clientCertFile string) error {
+	// Check for valid cert/key path
+	if len(certFile) == 0 || len(keyFile) == 0 {
+		return errors.New("tls: provide a valid cert or key path")
+	}
+
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return fmt.Errorf("tls: cannot load TLS key pair from certFile=%q and keyFile=%q: %s", certFile, keyFile, err)
+	}
+
+	clientCACert, err := ioutil.ReadFile(filepath.Clean(clientCertFile))
+	if err != nil {
+		return err
+	}
+	clientCertPool := x509.NewCertPool()
+	clientCertPool.AppendCertsFromPEM(clientCACert)
+
+	config := &tls.Config{
+		MinVersion: tls.VersionTLS12,
+		ClientAuth: tls.RequireAndVerifyClientCert,
+		ClientCAs:  clientCertPool,
+		Certificates: []tls.Certificate{
+			cert,
+		},
+	}
+
+	// Prefork is supported
+	if app.config.Prefork {
+		return app.prefork(app.config.Network, addr, config)
+	}
+
+	// Setup listener
+	ln, err := tls.Listen(app.config.Network, addr, config)
+	if err != nil {
+		return err
+	}
+
+	// prepare the server for the start
+	app.startupProcess()
+
+	// Print startup message
+	if !app.config.DisableStartupMessage {
+		app.startupMessage(ln.Addr().String(), true, "")
+	}
+
+	// Print routes
+	if app.config.EnablePrintRoutes {
+		app.printRoutesMessage()
+	}
+
+	// Start listening
+	return app.server.Serve(ln)
 }
 
 // Config returns the app config as value ( read-only ).
@@ -833,6 +931,10 @@ func (app *App) HandlersCount() uint32 {
 //
 // Shutdown does not close keepalive connections so its recommended to set ReadTimeout to something else than 0.
 func (app *App) Shutdown() error {
+	if app.hooks != nil {
+		defer app.hooks.executeOnShutdownHooks()
+	}
+
 	app.mutex.Lock()
 	defer app.mutex.Unlock()
 	if app.server == nil {
@@ -844,6 +946,11 @@ func (app *App) Shutdown() error {
 // Server returns the underlying fasthttp server
 func (app *App) Server() *fasthttp.Server {
 	return app.server
+}
+
+// Hooks returns the hook struct to register hooks.
+func (app *App) Hooks() *hooks {
+	return app.hooks
 }
 
 // Test is used for internal debugging by passing a *http.Request.
@@ -967,11 +1074,11 @@ func (app *App) ErrorHandler(ctx *Ctx, err error) error {
 		mountedPrefixParts int
 	)
 
-	for prefix, errHandler := range app.errorHandlers {
-		if strings.HasPrefix(ctx.path, prefix) {
+	for prefix, subApp := range app.appList {
+		if strings.HasPrefix(ctx.path, prefix) && prefix != "" {
 			parts := len(strings.Split(prefix, "/"))
 			if mountedPrefixParts <= parts {
-				mountedErrHandler = errHandler
+				mountedErrHandler = subApp.config.ErrorHandler
 				mountedPrefixParts = parts
 			}
 		}
@@ -1012,6 +1119,10 @@ func (app *App) serverErrorHandler(fctx *fasthttp.RequestCtx, err error) {
 
 // startupProcess Is the method which executes all the necessary processes just before the start of the server.
 func (app *App) startupProcess() *App {
+	if err := app.hooks.executeOnListenHooks(); err != nil {
+		panic(err)
+	}
+
 	app.mutex.Lock()
 	app.buildTree()
 	app.mutex.Unlock()

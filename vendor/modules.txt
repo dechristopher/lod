@@ -28,12 +28,14 @@ github.com/go-redis/redis/v8/internal/pool
 github.com/go-redis/redis/v8/internal/proto
 github.com/go-redis/redis/v8/internal/rand
 github.com/go-redis/redis/v8/internal/util
-# github.com/gofiber/fiber/v2 v2.24.0
+# github.com/gofiber/fiber/v2 v2.31.0
 ## explicit; go 1.16
 github.com/gofiber/fiber/v2
 github.com/gofiber/fiber/v2/internal/bytebufferpool
 github.com/gofiber/fiber/v2/internal/colorable
+github.com/gofiber/fiber/v2/internal/dictpool
 github.com/gofiber/fiber/v2/internal/fasttemplate
+github.com/gofiber/fiber/v2/internal/fwd
 github.com/gofiber/fiber/v2/internal/go-json
 github.com/gofiber/fiber/v2/internal/go-json/decoder
 github.com/gofiber/fiber/v2/internal/go-json/encoder
@@ -44,6 +46,7 @@ github.com/gofiber/fiber/v2/internal/go-json/encoder/vm_indent
 github.com/gofiber/fiber/v2/internal/go-json/errors
 github.com/gofiber/fiber/v2/internal/go-json/runtime
 github.com/gofiber/fiber/v2/internal/isatty
+github.com/gofiber/fiber/v2/internal/msgp
 github.com/gofiber/fiber/v2/internal/schema
 github.com/gofiber/fiber/v2/internal/uuid
 github.com/gofiber/fiber/v2/middleware/compress
