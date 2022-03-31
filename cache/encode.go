@@ -3,20 +3,10 @@ package cache
 import (
 	"crypto/sha256"
 	"encoding/binary"
-	"fmt"
-
-	"github.com/dechristopher/lod/str"
-	"github.com/dechristopher/lod/util"
 )
 
 // Encode tile data and metadata into a TilePacket
-func (c *Cache) Encode(cacheKey string, tile []byte, headers map[string]string) TilePacket {
-	if len(tile) == 0 {
-		util.Error(str.CCache, str.ECacheEmptyTile,
-			fmt.Sprintf("%s/%s", c.Proxy.Name, cacheKey))
-		return nil
-	}
-
+func (c *Cache) Encode(tile []byte, headers map[string]string) TilePacket {
 	// final tile packet
 	var packet TilePacket
 

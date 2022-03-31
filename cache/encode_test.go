@@ -34,7 +34,7 @@ var (
 // TestEncode will test that a given tile and metadata encodes properly
 func TestEncode(t *testing.T) {
 	// encode test tile
-	tile := testCache.Encode("7/37/47", testTile, testHeaders)
+	tile := testCache.Encode(testTile, testHeaders)
 
 	// test the header counter was encoded properly
 	if tile.LenHeaders() != len(testHeaders) {
@@ -62,7 +62,7 @@ func TestEncodeNoHeaders(t *testing.T) {
 	headers := map[string]string{}
 
 	// encode test tile
-	tile := testCache.Encode("7/37/47", testTile, headers)
+	tile := testCache.Encode(testTile, headers)
 
 	// test the header counter was encoded properly
 	if tile.LenHeaders() != len(headers) {
@@ -89,6 +89,6 @@ func TestEncodeNoHeaders(t *testing.T) {
 func BenchmarkEncode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// encode test tile N times
-		_ = testCache.Encode("7/37/47", testTile, testHeaders)
+		_ = testCache.Encode(testTile, testHeaders)
 	}
 }

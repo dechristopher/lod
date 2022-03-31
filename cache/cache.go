@@ -270,7 +270,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *TilePacket {
 // EncodeSet will encode tile data into a TilePacket and then set the cache
 // entry to the specified key
 func (c *Cache) EncodeSet(key string, tileData []byte, headers map[string]string) {
-	packet := c.Encode(key, tileData, headers)
+	packet := c.Encode(tileData, headers)
 	c.Set(key, packet)
 }
 

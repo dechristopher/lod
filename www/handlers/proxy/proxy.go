@@ -4,9 +4,9 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/dechristopher/lod/tile"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/proxy"
-	"github.com/dechristopher/lod/tile"
 
 	"github.com/dechristopher/lod/cache"
 	"github.com/dechristopher/lod/config"
@@ -87,7 +87,8 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 			return err
 		}
 
-		if len(ctx.Response().Body()) > 0 && ctx.Response().StatusCode() == fiber.StatusOK {
+		if ctx.Response().StatusCode() == fiber.StatusNoContent ||
+			(len(ctx.Response().Body()) > 0 && ctx.Response().StatusCode() == fiber.StatusOK) {
 			// copy tile data into separate slice, so we don't lose the reference
 			tileData := make([]byte, len(ctx.Response().Body()))
 			copy(tileData, ctx.Response().Body())
@@ -101,12 +102,18 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 			// internals of the tileserver if you don't control what it returns
 			p.DeleteHeaders(ctx)
 
+			// set 204 Status No Content if upstream tileserver returned no/empty tile
+			if ctx.Response().StatusCode() == fiber.StatusNoContent {
+				ctx.Status(fiber.StatusNoContent)
+			}
+
 			// spin off a routine to cache the tile without blocking the response
 			go cache.EncodeSet(cacheKey, tileData, headers)
 		} else {
 			ctx.Locals("lod-cache", " :err-u")
-			// Send bad request response with empty body if upstream
-			return ctx.Status(fiber.StatusBadRequest).SendString("")
+			// Send internal server error response with empty body if upstream
+			// fails to respond or responds with a non-200 status code
+			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 	}
 

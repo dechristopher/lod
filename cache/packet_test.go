@@ -11,7 +11,7 @@ import (
 // TestEncode will test that a given tile and metadata encodes properly
 func TestDecode(t *testing.T) {
 	// encode test tile
-	tile := testCache.Encode("7/37/47", testTile, testHeaders)
+	tile := testCache.Encode(testTile, testHeaders)
 
 	// decode tile and check for errors
 	decodedTile, decodedHeaders, err := tile.Decode()
@@ -33,7 +33,7 @@ func TestDecode(t *testing.T) {
 // BenchmarkDecode will benchmark a standard tile and metadata decode
 func BenchmarkDecode(b *testing.B) {
 	// encode test tile
-	tile := testCache.Encode("7/37/47", testTile, testHeaders)
+	tile := testCache.Encode(testTile, testHeaders)
 
 	for i := 0; i < b.N; i++ {
 		// decode tile and check for errors
