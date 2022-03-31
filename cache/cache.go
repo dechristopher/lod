@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"sync"
 
 	"github.com/allegro/bigcache/v3"
@@ -124,6 +125,13 @@ func initExternal(proxy config.Proxy) (*redis.Client, error) {
 		util.Error(str.CCache, str.ECacheCreate, err.Error())
 		return nil, err
 	}
+
+	if proxy.Cache.RedisTLS {
+		opts.TLSConfig = &tls.Config{
+			MinVersion: tls.VersionTLS12,
+		}
+	}
+
 	external := redis.NewClient(opts)
 
 	_, err = external.Ping(context.Background()).Result()

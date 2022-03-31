@@ -90,6 +90,7 @@ type Cache struct {
 	RedisTTLDuration time.Duration `json:"-" toml:"-"`                 // parsed duration from RedisTTL
 	// Example: redis://<user>:<password>@<host>:<port>/<db_number>
 	RedisURL    string `json:"-" toml:"redis_url"`               // full redis connection URL for parsing, SENSITIVE
+	RedisTLS    bool   `json:"redis_tls" toml:"redis_tls"`       // whether to use TLS when connecting to the redis server
 	KeyTemplate string `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
 }
 
