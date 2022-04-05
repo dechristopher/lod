@@ -47,16 +47,18 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 	proxyGroup.Get(path, genHandler(p))
 
 	// set common cors headers after handlers to override response from upstream
-	proxyGroup.Use(corsHeaders(p))
+	proxyGroup.Use(corsHeaders())
 }
 
-// corsHeaders sets cord headers after proxy genHandler execution
-func corsHeaders(p config.Proxy) fiber.Handler {
+// corsHeaders sets CORS headers after proxy genHandler execution
+func corsHeaders() fiber.Handler {
 	return func(ctx *fiber.Ctx) error {
+		ctx.Vary(fiber.HeaderOrigin)
+
 		// Set CORS allow methods
-		ctx.Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		ctx.Set("Access-Control-Allow-Methods", "GET,OPTIONS")
 		// Set CORS origin headers
-		ctx.Set("Access-Control-Allow-Origin", config.CorsOrigins(p))
+		ctx.Set("Access-Control-Allow-Origin", ctx.Get(fiber.HeaderOrigin))
 		return nil
 	}
 }
