@@ -25,7 +25,7 @@ func Info(caller, message string, args ...interface{}) {
 
 // Debug prints a debug message to the standard logger
 func Debug(caller, message string, args ...interface{}) {
-	if env.IsDev() {
+	if !env.IsProd() {
 		printLog("debug", str.DebugFormat, caller, message, args...)
 	}
 }
@@ -45,7 +45,7 @@ func Error(caller, message string, args ...interface{}) {
 // printLog prints logs to stdout in the proper format
 // Standard in developer mode and JSON in deploy mode
 func printLog(severity, format, caller, message string, args ...interface{}) {
-	if env.GetEnv() == env.Dev {
+	if !env.IsProd() {
 		log.Printf(format, caller, fmt.Sprintf(message, args...))
 	} else {
 		logMessage := LogMessage{
