@@ -29,7 +29,7 @@ func Serve() {
 			util.Error(str.CMain, str.ERequest, ctx.String(), err.Error())
 
 			// send JSON error output if in dev mode
-			if env.IsDev() {
+			if !env.IsProd() {
 				return ctx.Status(fiber.StatusInternalServerError).JSON(map[string]string{
 					"status": "internal server error",
 					"error":  err.Error(),
@@ -67,7 +67,7 @@ func Serve() {
 
 	// listen for connections on primary listening port
 	if err := r.Listen(config.GetListenPort()); err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
 
 	// Exit cleanly
