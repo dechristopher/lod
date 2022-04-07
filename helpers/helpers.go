@@ -76,7 +76,7 @@ func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, 
 func FillParamsMap(proxy config.Proxy, ctx *fiber.Ctx) {
 	paramsMap := make(map[string]string)
 	for _, param := range proxy.Params {
-		if val := ctx.Params(param.Name, param.Default); val != "" {
+		if val := ctx.Query(param.Name, param.Default); val != "" {
 			paramsMap[param.Name] = val
 		}
 	}
