@@ -1,12 +1,9 @@
-package cache
+package packet
 
 import (
 	_ "embed"
 	"reflect"
 	"testing"
-	"time"
-
-	"github.com/allegro/bigcache/v3"
 
 	"github.com/dechristopher/lod/str"
 )
@@ -15,16 +12,6 @@ import (
 var testTile []byte
 
 var (
-	testCache = &Cache{
-		internal: func() *bigcache.BigCache {
-			conf := bigcache.DefaultConfig(time.Duration(3600) * time.Second)
-			cache, err := bigcache.NewBigCache(conf)
-			if err != nil {
-				panic(err)
-			}
-			return cache
-		}(),
-	}
 	testHeaders = map[string]string{
 		"Content-Type":     "application/vnd.mapbox-vector-tile",
 		"Content-Encoding": "gzip",
@@ -34,7 +21,7 @@ var (
 // TestEncode will test that a given tile and metadata encodes properly
 func TestEncode(t *testing.T) {
 	// encode test tile
-	tile := testCache.Encode(testTile, testHeaders)
+	tile := Encode(testTile, testHeaders)
 
 	// test the header counter was encoded properly
 	if tile.LenHeaders() != len(testHeaders) {
@@ -62,7 +49,7 @@ func TestEncodeNoHeaders(t *testing.T) {
 	headers := map[string]string{}
 
 	// encode test tile
-	tile := testCache.Encode(testTile, headers)
+	tile := Encode(testTile, headers)
 
 	// test the header counter was encoded properly
 	if tile.LenHeaders() != len(headers) {
@@ -89,6 +76,6 @@ func TestEncodeNoHeaders(t *testing.T) {
 func BenchmarkEncode(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		// encode test tile N times
-		_ = testCache.Encode(testTile, testHeaders)
+		_ = Encode(testTile, testHeaders)
 	}
 }

@@ -1,16 +1,14 @@
-package cache
+package packet
 
 import (
 	"crypto/sha256"
 	"encoding/binary"
-
-	"github.com/dechristopher/lod/packet"
 )
 
 // Encode tile data and metadata into a TilePacket
-func (c *Cache) Encode(tile []byte, headers map[string]string) packet.TilePacket {
+func Encode(tile []byte, headers map[string]string) TilePacket {
 	// final tile packet
-	var tilePacket packet.TilePacket
+	var tilePacket TilePacket
 
 	// insert empty checksum for later, prevents us from appending the whole
 	// packet to the computed checksum when we can just set the bytes
