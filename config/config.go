@@ -125,9 +125,10 @@ func Load() error {
 	} else {
 		// read config file from disk if provided as a local path
 		configData, err = ioutil.ReadFile(*File)
-		if err != nil {
-			return err
-		}
+	}
+
+	if err != nil {
+		return err
 	}
 
 	// expand environment variables present within raw config
