@@ -1,8 +1,8 @@
-# github.com/BurntSushi/toml v0.4.1
+# github.com/BurntSushi/toml v1.1.0
 ## explicit; go 1.16
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
-# github.com/allegro/bigcache/v3 v3.0.1
+# github.com/allegro/bigcache/v3 v3.0.2
 ## explicit; go 1.16
 github.com/allegro/bigcache/v3
 github.com/allegro/bigcache/v3/queue
@@ -18,8 +18,8 @@ github.com/cespare/xxhash/v2
 # github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f
 ## explicit
 github.com/dgryski/go-rendezvous
-# github.com/go-redis/redis/v8 v8.11.4
-## explicit; go 1.13
+# github.com/go-redis/redis/v8 v8.11.5
+## explicit; go 1.17
 github.com/go-redis/redis/v8
 github.com/go-redis/redis/v8/internal
 github.com/go-redis/redis/v8/internal/hashtag
@@ -52,7 +52,6 @@ github.com/gofiber/fiber/v2/internal/uuid
 github.com/gofiber/fiber/v2/middleware/compress
 github.com/gofiber/fiber/v2/middleware/cors
 github.com/gofiber/fiber/v2/middleware/logger
-github.com/gofiber/fiber/v2/middleware/proxy
 github.com/gofiber/fiber/v2/middleware/recover
 github.com/gofiber/fiber/v2/middleware/requestid
 github.com/gofiber/fiber/v2/utils
@@ -63,8 +62,8 @@ github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/joho/godotenv v1.3.0
-## explicit
+# github.com/joho/godotenv v1.4.0
+## explicit; go 1.12
 github.com/joho/godotenv
 # github.com/klauspost/compress v1.15.0
 ## explicit; go 1.15
@@ -96,8 +95,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/twpayne/go-geos v0.1.0
-## explicit; go 1.14
+# github.com/twpayne/go-geos v0.2.0
+## explicit; go 1.17
 github.com/twpayne/go-geos
 # github.com/valyala/bytebufferpool v1.0.0
 ## explicit

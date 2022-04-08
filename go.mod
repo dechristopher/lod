@@ -3,15 +3,15 @@ module github.com/dechristopher/lod
 go 1.17
 
 require (
-	github.com/BurntSushi/toml v0.4.1
-	github.com/allegro/bigcache/v3 v3.0.1
-	github.com/go-redis/redis/v8 v8.11.4
+	github.com/BurntSushi/toml v1.1.0
+	github.com/allegro/bigcache/v3 v3.0.2
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gofiber/fiber/v2 v2.31.0
-	github.com/joho/godotenv v1.3.0
+	github.com/joho/godotenv v1.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/prometheus/client_model v0.2.0
-	github.com/twpayne/go-geos v0.1.0
+	github.com/twpayne/go-geos v0.2.0
 	github.com/valyala/fasthttp v1.34.0
 )
 
