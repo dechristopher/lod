@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"github.com/dechristopher/lod/cache"
 	"github.com/dechristopher/lod/config"
 	"github.com/dechristopher/lod/env"
 	"github.com/dechristopher/lod/str"
@@ -16,14 +17,47 @@ import (
 	"github.com/dechristopher/lod/www"
 )
 
-// init parses flags, sets constants, and prepares us for battle
-func init() {
+// main entry point to LOD
+func main() {
 	// set boot time immediately
 	util.BootTime = time.Now()
-
 	// print version info
 	fmt.Printf(str.MInit, config.Version)
 
+	// print message if in dev environment
+	if !env.IsProd() {
+		util.Info(str.CMain, str.MDevMode)
+	}
+
+	// parse and process command line flags
+	parseFlags()
+
+	// load .env if any
+	_ = godotenv.Load()
+
+	// read the config file
+	if err := config.Load(); err != nil {
+		if os.IsNotExist(err) {
+			util.Error(str.CMain, str.EConfigNotFound, *config.File)
+		} else {
+			util.Error(str.CMain, str.EConfig, err.Error())
+		}
+		os.Exit(1)
+	}
+
+	// initialize cache instances
+	if err := cache.Init(); err != nil {
+		util.Error(str.CMain, str.EConfig, err.Error())
+		os.Exit(1)
+	}
+
+	// serve LOD endpoints
+	www.Serve()
+}
+
+// parseFlags parses and processes command line flags
+// and shows the help message if requested
+func parseFlags() {
 	// parse command line flags
 	config.File = flag.String(str.FConfigFile, "config.toml", str.FConfigFileUsage)
 	env.IsDevFlag = flag.Bool(str.FDevMode, false, str.FDevModeUsage)
@@ -39,27 +73,4 @@ func init() {
 
 	// parse out debug flags from command line options
 	util.DebugFlags = strings.Split(*util.DebugFlagPtr, ",")
-
-	// read the config file
-	if err := config.Read(); err != nil {
-		if os.IsNotExist(err) {
-			util.Error(str.CMain, str.EConfigNotFound, *config.File)
-		} else {
-			util.Error(str.CMain, str.EConfig, err.Error())
-		}
-		os.Exit(1)
-	}
-
-	if env.IsDev() {
-		util.Info(str.CMain, str.MDevMode)
-	}
-}
-
-// main does the things
-func main() {
-	// load .env if any
-	_ = godotenv.Load()
-
-	// serve LOD endpoints
-	www.Serve()
 }

@@ -23,7 +23,6 @@ const (
 const (
 	CMain  = "LOD"
 	CLog   = "LOG"
-	CConf  = "CFG"
 	CProxy = "PRX"
 	CCache = "CCH"
 	CAdmin = "ADM"
@@ -32,12 +31,9 @@ const (
 // (E) Error messages
 const (
 	ELogFail            = "failed to log, error=%s msg=%+v"
-	EConfig             = "failed to read config file: %s"
+	EConfig             = "failed to configure instance: %s"
 	EConfigNotFound     = "config file not found at path: '%s'"
-	EConfigPort         = "port override in env is invalid, env=%s err=%s"
 	EBadRequest         = "failed to fetch URL parameters, error=%s"
-	ECacheCreate        = "failed to create internal cache, error=%s"
-	ECacheName          = "failed to create cache, no proxy configured, name=%s"
 	ECacheBuildKey      = "failed to build cache key err=%s"
 	ECacheFetch         = "failed to fetch tile from cache, key=%s error=%s"
 	ECacheDelete        = "failed to delete tile from cache, key=%s error=%s"
@@ -62,6 +58,7 @@ const (
 	MStarted            = "started in %s [env: %s][http: %d]"
 	MProxy              = "configured proxy [mem: %t / redis: %t][%s] -> %s"
 	MReload             = "reloaded instance capabilities"
+	MOldCacheDeleted    = "old cache instance '%s' removed"
 	MInvalidateTile     = "invalidated tile %s with no depth (%d) (%d tiles)"
 	MInvalidateTileDeep = "invalidated tile %s with depth %d (%d tiles)"
 	MPrimeTile          = "primed tile %s with no depth (%d) (%d tiles)"

@@ -2,34 +2,48 @@ package middleware
 
 import (
 	"fmt"
+	"strings"
 
+	"github.com/dechristopher/lod/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 
-	"github.com/dechristopher/lod/config"
 	"github.com/dechristopher/lod/env"
 )
 
 // Wire attaches all middleware to the given router
-func Wire(r fiber.Router, proxy ...config.Proxy) {
+func Wire(r fiber.Router, proxy *config.Proxy) {
 	r.Use(requestid.New())
 
 	// Compress responses for non-tiles, use tileserver compression and encoding
-	if len(proxy) == 0 {
+	if proxy == nil {
 		r.Use(compress.New(compress.Config{
 			Level: compress.LevelBestSpeed,
 		}))
 	}
 
-	// Configure CORS for non-tiles
-	if len(proxy) == 0 {
-		r.Use(cors.New(cors.Config{
-			AllowOrigins: "*",
-			AllowHeaders: "Origin, Content-Type, Accept",
-		}))
+	// Configure CORS
+	var origins string
+
+	if proxy != nil {
+		origins = proxy.CorsOrigins
 	}
+
+	if origins == "" {
+		origins = "*"
+	}
+
+	r.Use(cors.New(cors.Config{
+		AllowOrigins: origins,
+		AllowHeaders: "Origin, Content-Type, Accept",
+		AllowMethods: strings.Join([]string{
+			fiber.MethodGet,
+			fiber.MethodHead,
+			fiber.MethodOptions,
+		}, ","),
+	}))
 }
 
 // AuthType used for auth middleware generation
@@ -64,7 +78,7 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 			return ctx.Next()
 		}
 
-		if env.IsDev() {
+		if !env.IsProd() {
 			// provide useful error messages when running in dev mode
 			return ctx.Status(fiber.StatusUnauthorized).JSON(map[string]string{
 				"status":  "error",

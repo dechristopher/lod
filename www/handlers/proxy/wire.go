@@ -26,48 +26,20 @@ func wireProxy(r *fiber.App, p config.Proxy) {
 	proxyGroup := r.Group(p.Name)
 
 	// wire middleware for proxy group
-	middleware.Wire(r, p)
+	middleware.Wire(r, &p)
 
-	// enable auth middleware if admin token configured
+	// enable auth middleware if access token configured
 	if p.AccessToken != "" {
 		proxyGroup.Use(middleware.GenAuthMiddleware(p.AccessToken,
-			middleware.Query, true))
+			middleware.Query, false))
 	}
 
 	path := handlerEndpointPath
 	// if dynamic endpoint configured, add endpoint path parameter
-	if p.HasEParam {
+	if p.HasEndpointParam {
 		path = "/:e" + path
 	}
 
-	// configure CORS preflight genHandler
-	proxyGroup.Options(path, preflight)
-
 	// configure proxy endpoint genHandler
 	proxyGroup.Get(path, genHandler(p))
-
-	// set common cors headers after handlers to override response from upstream
-	proxyGroup.Use(corsHeaders())
-}
-
-// corsHeaders sets CORS headers after proxy genHandler execution
-func corsHeaders() fiber.Handler {
-	return func(ctx *fiber.Ctx) error {
-		ctx.Vary(fiber.HeaderOrigin)
-
-		// Set CORS allow methods
-		ctx.Set("Access-Control-Allow-Methods", "GET,OPTIONS")
-		// Set CORS origin headers
-		ctx.Set("Access-Control-Allow-Origin", ctx.Get(fiber.HeaderOrigin))
-		return nil
-	}
-}
-
-// preflight genHandler for CORS OPTIONS requests
-func preflight(ctx *fiber.Ctx) error {
-	// Tell client that this pre-flight info is valid for 20 days
-	ctx.Set("Access-Control-Max-Age", "1728000")
-	ctx.Set("Content-Type", "text/plain charset=UTF-8")
-	ctx.Set("Content-Length", "0")
-	return ctx.SendStatus(fiber.StatusNoContent)
 }

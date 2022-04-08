@@ -28,8 +28,3 @@ func GetEnv() Env {
 func IsProd() bool {
 	return GetEnv() == Prod
 }
-
-// IsDev returns true if the current deployed environment is not production
-func IsDev() bool {
-	return GetEnv() == Dev
-}

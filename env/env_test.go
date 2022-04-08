@@ -26,14 +26,3 @@ func TestIsProd(t *testing.T) {
 		t.Fatal("IsProd not prod env=", GetEnv())
 	}
 }
-
-func TestIsDev(t *testing.T) {
-	err := os.Setenv("DEPLOY", "DEV")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if !IsDev() {
-		t.Fatal("IsDev not dev env=", GetEnv())
-	}
-}

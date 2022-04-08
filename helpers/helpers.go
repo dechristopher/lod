@@ -11,23 +11,23 @@ import (
 )
 
 // GetTile computes the tile from the request URL
-func GetTile(ctx *fiber.Ctx) (tile.Tile, error) {
+func GetTile(ctx *fiber.Ctx) (*tile.Tile, error) {
 	x, xErr := ctx.ParamsInt("x")
 	if xErr != nil {
-		return tile.Tile{}, xErr
+		return nil, xErr
 	}
 
 	y, yErr := ctx.ParamsInt("y")
 	if yErr != nil {
-		return tile.Tile{}, yErr
+		return nil, yErr
 	}
 
 	zoom, zErr := ctx.ParamsInt("z")
 	if zErr != nil {
-		return tile.Tile{}, zErr
+		return nil, zErr
 	}
 
-	return tile.Tile{
+	return &tile.Tile{
 		X:    x,
 		Y:    y,
 		Zoom: zoom,
@@ -36,7 +36,7 @@ func GetTile(ctx *fiber.Ctx) (tile.Tile, error) {
 
 // BuildCacheKey will put together a cache key from the configured template
 func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, error) {
-	var currentTile tile.Tile
+	var currentTile *tile.Tile
 	var err error
 
 	if len(t) == 0 || t == nil {
@@ -45,14 +45,14 @@ func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, 
 			return "", err
 		}
 	} else {
-		currentTile = t[0]
+		currentTile = &t[0]
 	}
 
 	// replace XYZ values in the key template
 	key := currentTile.InjectString(proxy.Cache.KeyTemplate)
 
 	// replace dynamic endpoint parameter in cache key if configured
-	if proxy.HasEParam && strings.Contains(key, tile.EndpointTemplate) {
+	if proxy.HasEndpointParam && strings.Contains(key, tile.EndpointTemplate) {
 		endpoint := ctx.Params("e")
 		key = strings.ReplaceAll(key, tile.EndpointTemplate, endpoint)
 	}

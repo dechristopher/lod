@@ -47,7 +47,7 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 	// determine max zoom based on parameter
 	maxZoom, err := ctx.ParamsInt("maxZoom", payload.MaxZoom)
 	if err != nil {
-		util.Error(str.CAdmin, payload.ErrorMessage, tile, err.Error())
+		util.Error(str.CAdmin, payload.ErrorMessage, tile.String(), err.Error())
 		return ctx.Status(fiber.StatusInternalServerError).JSON(map[string]string{
 			"status":  "failed",
 			"error":   "internal server error",
@@ -64,13 +64,12 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 		// simply invalidate en masse
 		for _, t := range tiles {
 			key, err := helpers.BuildCacheKey(*c.Proxy, ctx, t)
-			fmt.Println(key)
 			if err != nil {
 				util.Debug(str.CAdmin, str.DInvalidateFail, tile.String(), err.Error())
 				failed++
 				continue
 			}
-			errInv := c.Invalidate(key)
+			errInv := c.Invalidate(key, ctx.Context())
 			if errInv != nil {
 				util.Debug(str.CAdmin, str.DInvalidateFail, tile.String(), errInv)
 				failed++

@@ -1,4 +1,4 @@
-package cache
+package packet
 
 import (
 	_ "embed"

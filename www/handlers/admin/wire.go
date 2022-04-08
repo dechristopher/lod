@@ -15,7 +15,7 @@ func Wire(r *fiber.App) {
 	adminGroup := r.Group("/admin")
 
 	// wire up all middleware components
-	middleware.Wire(adminGroup)
+	middleware.Wire(adminGroup, nil)
 
 	// enable auth middleware if admin token configured
 	if config.Get().Instance.AdminToken != "" {
@@ -47,16 +47,16 @@ func Wire(r *fiber.App) {
 	// return stats for a cache by name
 	adminGroup.Get("/:name/stats", Stats)
 
-	// flush all proxy caches
+	// flush the in-memory caches of all proxies
 	adminGroup.Get("/flush", Flush)
 
-	// flush an entire proxy cache by name
+	// flush the in-memory cache of a proxy by name
 	adminGroup.Get("/:name/flush", Flush)
 
 	// invalidate a given tile without re-priming
 	adminGroup.Get("/:name/invalidate/:z/:x/:y", InvalidateTile)
 
-	// invalidate and a given tile and all of its children up to a given max
+	// invalidate a given tile and all of its children up to a given max
 	// maxZoom defaults to zoom level 12
 	adminGroup.Get("/:name/invalidate/deep/:z/:x/:y", InvalidateTileDeep)
 	adminGroup.Get("/:name/invalidate/deep/:z/:x/:y/:maxZoom", InvalidateTileDeep)

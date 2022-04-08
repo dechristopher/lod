@@ -6,16 +6,15 @@ import (
 	"net/http"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/dechristopher/lod/tile"
+	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/dechristopher/lod/env"
-	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/tile"
 	"github.com/dechristopher/lod/util"
 )
 
@@ -25,8 +24,8 @@ var (
 
 	Namespace = "lod"
 
-	// conf is a store for local instance Capabilities
-	conf Capabilities
+	// capabilities is a store for local instance Capabilities
+	capabilities Capabilities
 
 	// File is a reference to the config file path to read from
 	File *string
@@ -50,16 +49,16 @@ type Instance struct {
 
 // Proxy represents a configuration for a single endpoint proxy instance
 type Proxy struct {
-	Name        string   `json:"name" toml:"name"`                 // display name for this proxy
-	TileURL     string   `json:"tile_url" toml:"tile_url"`         // templated tileserver URL that this instance will hit
-	HasEParam   bool     `json:"has_endpoint_param"`               // internal variable to track whether this proxy has a dynamic endpoint configured
-	CorsOrigins string   `json:"cors_origins" toml:"cors_origins"` // allowed CORS origins, comma separated
-	PullHeaders []string `json:"pull_headers" toml:"pull_headers"` // additional headers to pull and cache from the tileserver
-	DelHeaders  []string `json:"del_headers" toml:"del_headers"`   // headers to exclude from the tileserver response
-	AddHeaders  []Header `json:"add_headers" toml:"add_headers"`   // headers to inject into upstream requests to tileserver
-	AccessToken string   `json:"-" toml:"access_token"`            // optional access token for incoming requests
-	Params      []Param  `json:"params" toml:"params"`             // URL query parameter configurations for this instance
-	Cache       Cache    `json:"cache" toml:"cache"`               // cache configuration for this proxy instance
+	Name             string   `json:"name" toml:"name"`                 // display name for this proxy
+	TileURL          string   `json:"tile_url" toml:"tile_url"`         // templated tileserver URL that this instance will hit
+	HasEndpointParam bool     `json:"has_endpoint_param"`               // internal variable to track whether this proxy has a dynamic endpoint configured
+	CorsOrigins      string   `json:"cors_origins" toml:"cors_origins"` // allowed CORS origins, comma separated
+	PullHeaders      []string `json:"pull_headers" toml:"pull_headers"` // additional headers to pull and cache from the tileserver
+	DeleteHeaders    []string `json:"del_headers" toml:"del_headers"`   // headers to exclude from the tileserver response
+	AddHeaders       []Header `json:"add_headers" toml:"add_headers"`   // headers to inject into upstream requests to tileserver
+	AccessToken      string   `json:"-" toml:"access_token"`            // optional access token for incoming requests
+	Params           []Param  `json:"params" toml:"params"`             // URL query parameter configurations for this instance
+	Cache            Cache    `json:"cache" toml:"cache"`               // cache configuration for this proxy instance
 }
 
 // Header to inject in upstream request to tileserver
@@ -79,19 +78,20 @@ type Param struct {
 // Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
 // For example: 1h, 300s, 1000ms, 2h35m, etc.
 type Cache struct {
-	MemEnabled     bool          `json:"mem_enabled" toml:"mem_enable"` // whether the in-memory cache is enabled
-	MemCap         int           `json:"mem_cap" toml:"mem_cap"`        // maximum capacity in MB of the in-memory cache
-	MemTTL         string        `json:"mem_ttl" toml:"mem_ttl"`        // in-memory cache TTL, ex: 1h, 30s, 1000ms, etc
-	MemTTLDuration time.Duration `json:"-" toml:"-"`                    // parsed duration from MemTTL
-	RedisEnabled   bool          `json:"redis_enabled" toml:"-"`        // used internally to track presence of Redis configuration
+	MemEnabled     bool          `json:"mem_enabled" toml:"mem_enabled"`     // whether the in-memory cache is enabled
+	MemCap         int           `json:"mem_cap" toml:"mem_cap"`             // maximum capacity in MB of the in-memory cache
+	MemTTL         string        `json:"mem_ttl" toml:"mem_ttl"`             // in-memory cache TTL, ex: 1h, 30s, 1000ms, etc
+	MemTTLDuration time.Duration `json:"-" toml:"-"`                         // parsed duration from MemTTL
+	RedisEnabled   bool          `json:"redis_enabled" toml:"redis_enabled"` // whether the redis cache is enabled
 	// Note: our redis cache does not have a max cap on tiles. It will grow unbounded, so
 	// you must use a TTL to avoid capping out your cluster if you have a large tile set.
 	RedisTTL         string        `json:"redis_ttl" toml:"redis_ttl"` // redis tile cache TTL, ex: 1h, 30s, 1000ms, etc
 	RedisTTLDuration time.Duration `json:"-" toml:"-"`                 // parsed duration from RedisTTL
 	// Example: redis://<user>:<password>@<host>:<port>/<db_number>
-	RedisURL    string `json:"-" toml:"redis_url"`               // full redis connection URL for parsing, SENSITIVE
-	RedisTLS    bool   `json:"redis_tls" toml:"redis_tls"`       // whether to use TLS when connecting to the redis server
-	KeyTemplate string `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
+	RedisURL    string         `json:"-" toml:"redis_url"`               // full redis connection URL for parsing, SENSITIVE
+	RedisTLS    bool           `json:"redis_tls" toml:"redis_tls"`       // whether to use TLS when connecting to the redis server
+	RedisOpts   *redis.Options `json:"-" toml:"-"`                       // internal redis options, first parsed with config
+	KeyTemplate string         `json:"key_template" toml:"key_template"` // cache key template, supports XYZ and URL parameters
 }
 
 var defaultCache = Cache{
@@ -110,40 +110,20 @@ var zeroCache = Cache{
 
 // Get returns a pointer to the global configuration
 func Get() *Capabilities {
-	return &conf
+	return &capabilities
 }
 
-// Read config file into Capabilities
-func Read() error {
+// Load config file into instance Capabilities
+func Load() error {
+	var newCapabilities Capabilities
 	var configData []byte
 	var err error
 
 	if util.IsUrl(*File) {
-		// fetch config from URL if valid
-		resp, err := http.Get(*File)
-		if err != nil {
-			return ErrConfigGetHTTP{
-				URL: *File,
-				Err: err,
-			}
-		}
-
-		if resp.StatusCode != 200 {
-			return ErrConfigGetHTTP{
-				URL:    *File,
-				Status: resp.StatusCode,
-			}
-		}
-
-		configData, err = ioutil.ReadAll(resp.Body)
-		if err != nil {
-			return ErrConfigGetHTTP{
-				URL: *File,
-				Err: err,
-			}
-		}
+		// read config file from URL if provided as a URL
+		configData, err = readHttp()
 	} else {
-		// read config file from disk if not provided as a URL
+		// read config file from disk if provided as a local path
 		configData, err = ioutil.ReadFile(*File)
 		if err != nil {
 			return err
@@ -154,39 +134,87 @@ func Read() error {
 	configData = []byte(os.ExpandEnv(string(configData)))
 
 	// decode config file as TOML
-	if _, err = toml.Decode(string(configData), &conf); err != nil {
+	if _, err = toml.Decode(string(configData), &newCapabilities); err != nil {
 		return err
 	}
 
+	// inject instance info to config for viewing in /capabilities
+	newCapabilities.Instance.Environment = string(env.GetEnv())
+	newCapabilities.Version = Version
+
+	// validate configuration
+	err = validateCapabilities(&newCapabilities)
+	if err != nil {
+		return err
+	}
+
+	// set capabilities after validation
+	capabilities = newCapabilities
+
 	// set default cache parameters if not provided
-	for i := range conf.Proxies {
-		if conf.Proxies[i].Cache == zeroCache {
-			conf.Proxies[i].Cache = defaultCache
+	setDefaults()
+
+	return nil
+}
+
+// readHttp reads the config from the
+func readHttp() ([]byte, error) {
+	// fetch config from URL if valid
+	resp, err := http.Get(*File)
+	if err != nil {
+		return nil, ErrConfigGetHTTP{
+			URL: *File,
+			Err: err,
+		}
+	}
+
+	// only accept 200 status codes, reject all others
+	if resp.StatusCode != 200 {
+		return nil, ErrConfigGetHTTP{
+			URL:    *File,
+			Status: resp.StatusCode,
+		}
+	}
+
+	// read all bytes from response body into configData
+	configData, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, ErrConfigGetHTTP{
+			URL: *File,
+			Err: err,
+		}
+	}
+
+	return configData, nil
+}
+
+// set default instance and cache properties for read configuration if not provided
+func setDefaults() {
+	if capabilities.Instance.Port == 0 {
+		capabilities.Instance.Port = 3100
+	}
+
+	for i := range capabilities.Proxies {
+		if capabilities.Proxies[i].Cache == zeroCache {
+			capabilities.Proxies[i].Cache = defaultCache
 		}
 
-		if conf.Proxies[i].Cache.KeyTemplate == "" {
-			conf.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
+		if capabilities.Proxies[i].Cache.KeyTemplate == "" {
+			capabilities.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
 		}
 
-		if conf.Proxies[i].PullHeaders == nil {
-			conf.Proxies[i].PullHeaders = make([]string, 0)
+		if capabilities.Proxies[i].PullHeaders == nil {
+			capabilities.Proxies[i].PullHeaders = make([]string, 0)
 		}
 
 		// Register default content headers
-		conf.Proxies[i].registerHeader("Content-Type")
-		conf.Proxies[i].registerHeader("Content-Encoding")
+		capabilities.Proxies[i].registerHeader(fiber.HeaderContentType)
+		capabilities.Proxies[i].registerHeader(fiber.HeaderContentEncoding)
 	}
-
-	// inject instance info to config for viewing in /capabilities
-	conf.Instance.Environment = string(env.GetEnv())
-	conf.Version = Version
-
-	// validate configuration
-	return validate(&conf)
 }
 
-// validate instance Capabilities for sanity and errors
-func validate(c *Capabilities) error {
+// validateCapabilities validates instance Capabilities for sanity and errors
+func validateCapabilities(c *Capabilities) error {
 	if c.Instance.Port < 1 || c.Instance.Port > 65535 {
 		return ErrInvalidPort{Port: c.Instance.Port}
 	}
@@ -217,22 +245,22 @@ func (p *Proxy) registerHeader(header string) {
 	}
 }
 
-// PopulateHeaders will fill the given header map with configured headers
-func (p *Proxy) PopulateHeaders(c *fiber.Ctx, headers map[string]string) {
+// DoPullHeaders will fill the given header map with configured headers
+// extracted from proxied requests to store alongside tile data in TilePackets
+func (p *Proxy) DoPullHeaders(resp *fiber.Response, headers map[string]string) {
 	for _, header := range p.PullHeaders {
-		if len(c.Response().Header.Peek(header)) > 0 {
-			headers[header] = string(c.Response().Header.Peek(header))
+		headerValue := resp.Header.Peek(header)
+		if len(headerValue) > 0 {
+			headers[header] = string(headerValue)
 		}
 	}
 }
 
-// DeleteHeaders will strip headers from the response that are part of the
-// DelHeaders list of headers to delete from the final response
-func (p *Proxy) DeleteHeaders(c *fiber.Ctx) {
-	for _, delHeader := range p.DelHeaders {
-		if len(c.Response().Header.Peek(delHeader)) > 0 {
-			c.Response().Header.Del(delHeader)
-		}
+// DoDeleteHeaders will strip headers from the response that are part of the
+// DeleteHeaders list of headers to delete from the final response
+func (p *Proxy) DoDeleteHeaders(c *fiber.Ctx) {
+	for _, delHeader := range p.DeleteHeaders {
+		c.Response().Header.Del(delHeader)
 	}
 }
 
@@ -244,10 +272,7 @@ func validateProxy(num int, proxy *Proxy) error {
 
 	matched, err := regexp.Match("^[a-zA-Z0-9_-]+$", []byte(proxy.Name))
 	if err != nil {
-		return ErrProxyName{
-			Number: num + 1,
-			Err:    err,
-		}
+		panic(err)
 	}
 
 	if !matched {
@@ -263,8 +288,8 @@ func validateProxy(num int, proxy *Proxy) error {
 		}
 	}
 
-	// reflect presence of dynamic endpoint template in HasEParam
-	proxy.HasEParam = strings.Contains(proxy.TileURL, tile.EndpointTemplate)
+	// reflect presence of dynamic endpoint template in HasEndpointParam
+	proxy.HasEndpointParam = strings.Contains(proxy.TileURL, tile.EndpointTemplate)
 
 	if !strings.Contains(proxy.TileURL, "{z}") {
 		return ErrMissingTileURLTemplate{
@@ -290,14 +315,14 @@ func validateProxy(num int, proxy *Proxy) error {
 		}
 	}
 
-	// validate the proxy's parameter configurations
-	if errParams := validateParams(proxy); errParams != nil {
-		return errParams
-	}
-
 	// validate the proxy's cache configuration
 	if errCache := validateCache(proxy); errCache != nil {
 		return errCache
+	}
+
+	// validate the proxy's parameter configurations
+	if errParams := validateParams(proxy); errParams != nil {
+		return errParams
 	}
 
 	return nil
@@ -305,42 +330,21 @@ func validateProxy(num int, proxy *Proxy) error {
 
 // validateCache will validate a proxy endpoint's cache configuration
 func validateCache(proxy *Proxy) error {
-
-	if proxy.Cache.MemCap > 0 || proxy.Cache.MemTTL != "" {
-		proxy.Cache.MemEnabled = true
+	// ensure at least one cache is enabled
+	if !proxy.Cache.MemEnabled && !proxy.Cache.RedisEnabled {
+		return ErrNoCacheEnabled{
+			ProxyName: proxy.Name,
+		}
 	}
 
-	// parse in-memory cache parameters if enabled
-	if proxy.Cache.MemEnabled {
-		if proxy.Cache.MemCap < 1 {
-			return ErrInvalidMemCap{ProxyName: proxy.Name}
-		}
-
-		memTTL, err := time.ParseDuration(proxy.Cache.MemTTL)
-		if err != nil {
-			return ErrInvalidMemTTL{
-				ProxyName: proxy.Name,
-				TTL:       proxy.Cache.MemTTL,
-			}
-		}
-
-		proxy.Cache.MemTTLDuration = memTTL
+	// validate internal cache configuration
+	if err := validateInternalCache(proxy); err != nil {
+		return err
 	}
 
-	if proxy.Cache.RedisURL != "" {
-		proxy.Cache.RedisEnabled = true
-	}
-
-	if proxy.Cache.RedisEnabled {
-		redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
-		if err != nil {
-			return ErrInvalidRedisTTL{
-				ProxyName: proxy.Name,
-				TTL:       proxy.Cache.MemTTL,
-			}
-		}
-
-		proxy.Cache.RedisTTLDuration = redisTTL
+	// validate external cache configuration
+	if err := validateExternalCache(proxy); err != nil {
+		return err
 	}
 
 	if !strings.Contains(proxy.Cache.KeyTemplate, "{z}") {
@@ -364,6 +368,80 @@ func validateCache(proxy *Proxy) error {
 			ProxyName: proxy.Name,
 			Template:  proxy.Cache.KeyTemplate,
 			Parameter: "{y}",
+		}
+	}
+
+	return nil
+}
+
+// validateInternalCache validates internal cache configuration
+func validateInternalCache(proxy *Proxy) error {
+	// parse and validate in-memory cache parameters if enabled
+	if proxy.Cache.MemEnabled {
+		if proxy.Cache.MemCap < 1 {
+			return ErrInvalidMemCap{ProxyName: proxy.Name}
+		}
+
+		memTTL, err := time.ParseDuration(proxy.Cache.MemTTL)
+		if err != nil {
+			return ErrInvalidMemTTL{
+				ProxyName: proxy.Name,
+				TTL:       proxy.Cache.MemTTL,
+			}
+		}
+
+		// reject negative or zero TTLs
+		// since in-memory cache must expire
+		if memTTL < 0 {
+			return ErrInvalidMemTTL{
+				ProxyName: proxy.Name,
+				TTL:       proxy.Cache.MemTTL,
+			}
+		}
+
+		proxy.Cache.MemTTLDuration = memTTL
+	}
+
+	return nil
+}
+
+// validateExternalCache validates external cache configuration
+func validateExternalCache(proxy *Proxy) error {
+	// parse and validate redis cache parameters if enabled
+	if proxy.Cache.RedisEnabled {
+		// validate URL
+		var errParse error
+		proxy.Cache.RedisOpts, errParse = redis.ParseURL(proxy.Cache.RedisURL)
+		if errParse != nil {
+			return ErrInvalidRedisURL{
+				ProxyName: proxy.Name,
+				URL:       proxy.Cache.RedisURL,
+				Err:       errParse,
+			}
+		}
+
+		// validate that TTL is sane
+		if proxy.Cache.RedisTTL != "" {
+			redisTTL, err := time.ParseDuration(proxy.Cache.RedisTTL)
+			if err != nil {
+				return ErrInvalidRedisTTL{
+					ProxyName: proxy.Name,
+					TTL:       proxy.Cache.RedisTTL,
+				}
+			}
+
+			// reject negative TTLs
+			if redisTTL < 0 {
+				return ErrInvalidRedisTTL{
+					ProxyName: proxy.Name,
+					TTL:       proxy.Cache.RedisTTL,
+				}
+			}
+
+			proxy.Cache.RedisTTLDuration = redisTTL
+		} else {
+			// set TTL duration to zero if none specified, meaning permanent persistence in Redis
+			proxy.Cache.RedisTTLDuration = 0
 		}
 	}
 
@@ -403,37 +481,12 @@ func validateParams(proxy *Proxy) error {
 }
 
 // GetPort returns the configured primary HTTP port
-// or 1337 if none configured
+// or 3100 if none configured
 func GetPort() int {
-	portEnv, ok := os.LookupEnv("PORT")
-	if !ok {
-		if conf.Instance.Port != 0 {
-			return conf.Instance.Port
-		}
-		return 1337
-	}
-	port, err := strconv.Atoi(portEnv)
-	if err != nil {
-		util.Error(str.CConf, str.EConfigPort, portEnv, err.Error())
-	}
-	return port
+	return capabilities.Instance.Port
 }
 
 // GetListenPort returns the colon-formatted listen port
 func GetListenPort() string {
 	return fmt.Sprintf(":%d", GetPort())
-}
-
-// CorsOrigins returns the proper CORS origin configuration
-// or "*" if none configured
-func CorsOrigins(p Proxy) string {
-	origins, ok := os.LookupEnv("CORS")
-	if !ok {
-		if p.CorsOrigins != "" {
-			return p.CorsOrigins
-		}
-		return "*"
-	}
-
-	return origins
 }

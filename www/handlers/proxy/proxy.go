@@ -4,14 +4,13 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/dechristopher/lod/tile"
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/proxy"
 
 	"github.com/dechristopher/lod/cache"
 	"github.com/dechristopher/lod/config"
 	"github.com/dechristopher/lod/helpers"
 	"github.com/dechristopher/lod/str"
+	"github.com/dechristopher/lod/tile"
 	"github.com/dechristopher/lod/util"
 )
 
@@ -22,7 +21,7 @@ type tileError struct {
 
 // genHandler builds a new proxy endpoint handler from configuration
 func genHandler(p config.Proxy) fiber.Handler {
-	// preconfigure cache on boot
+	// get cache instance for this proxy
 	c := cache.Get(p.Name)
 
 	// handler function to wire to endpoint
@@ -70,41 +69,70 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 		for key, val := range cachedTile.Headers() {
 			ctx.Set(key, val)
 		}
+
+		// remove delete list headers from final response
+		p.DoDeleteHeaders(ctx)
 	} else {
 		// IF WE MISSED A CACHED TILE
 		ctx.Locals("lod-cache", " :miss ")
 
+		// configure proxy agent
+		agent := fiber.AcquireAgent()
+		req := agent.Request()
+		req.Header.SetMethod(fiber.MethodGet)
+
+		// set agent request URL
+		req.SetRequestURI(tileUrl)
+
 		// inject headers to upstream request if any are configured
-		if len(p.AddHeaders) > 0 {
-			for _, header := range p.AddHeaders {
-				ctx.Request().Header.Del(header.Name)
-				ctx.Request().Header.Add(header.Name, header.Value)
-			}
+		for _, header := range p.AddHeaders {
+			// req.Header.Del(header.Name)
+			req.Header.Add(header.Name, header.Value)
 		}
 
-		// perform request to tile URL
-		if err := proxy.Do(ctx, tileUrl); err != nil {
-			return err
+		// parse agent request to find issues before making it
+		if err = agent.Parse(); err != nil {
+			panic(err)
 		}
 
-		if ctx.Response().StatusCode() == fiber.StatusNoContent ||
-			(len(ctx.Response().Body()) > 0 && ctx.Response().StatusCode() == fiber.StatusOK) {
+		// placeholder response for extracting headers from agent proxy request
+		resp := fiber.AcquireResponse()
+		agent.SetResponse(resp)
+
+		// make agent-proxied request
+		code, body, errs := agent.Bytes()
+		if len(errs) > 0 {
+			return errs[0]
+		}
+
+		// make sure a common 2XX response is received with relevant data, otherwise
+		// we complain and throw a 500 due to misconfiguration of the proxy
+		if code == fiber.StatusNoContent || (len(body) > 0 && code == fiber.StatusOK) {
 			// copy tile data into separate slice, so we don't lose the reference
-			tileData := make([]byte, len(ctx.Response().Body()))
-			copy(tileData, ctx.Response().Body())
+			tileData := make([]byte, len(body))
+			copy(tileData, body)
 
 			headers := map[string]string{}
 			// Store configured headers into the tile cache for this tile
-			p.PopulateHeaders(ctx, headers)
+			p.DoPullHeaders(resp, headers)
 
-			// Delete headers from the final response that are on the DelHeaders list
+			// immediately release response allocation back to memory pool for reuse
+			fiber.ReleaseResponse(resp)
+
+			// Delete headers from the final response that are on the DeleteHeaders list
 			// if we got them from the tileserver. This can be used to prevent leaking
 			// internals of the tileserver if you don't control what it returns
-			p.DeleteHeaders(ctx)
+			p.DoDeleteHeaders(ctx)
 
 			// set 204 Status No Content if upstream tileserver returned no/empty tile
-			if ctx.Response().StatusCode() == fiber.StatusNoContent {
+			if code == fiber.StatusNoContent {
 				ctx.Status(fiber.StatusNoContent)
+			}
+
+			// write agent proxied response body to the response
+			_, err = ctx.Write(body)
+			if err != nil {
+				return err
 			}
 
 			// spin off a routine to cache the tile without blocking the response
@@ -120,7 +148,7 @@ func handle(p config.Proxy, cache *cache.Cache, ctx *fiber.Ctx) error {
 	// Remove server header from response
 	ctx.Response().Header.Del(fiber.HeaderServer)
 
-	return ctx.Next()
+	return nil
 }
 
 // buildTileUrl will substitute URL tile params into the proxy tile URL
@@ -134,7 +162,7 @@ func buildTileUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
 	baseUrl := currentTile.InjectString(proxy.TileURL)
 
 	// replace dynamic endpoint parameter in URL if configured
-	if proxy.HasEParam {
+	if proxy.HasEndpointParam {
 		endpoint := ctx.Params("e")
 		baseUrl = strings.ReplaceAll(baseUrl, tile.EndpointTemplate, endpoint)
 	}

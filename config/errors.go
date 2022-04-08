@@ -2,8 +2,8 @@ package config
 
 import "fmt"
 
-// ErrConfigGetHTTP is an error struct for invalid instance
-// port, caught during the instance validation phase
+// ErrConfigGetHTTP is an error struct resulting from a bad
+// HTTP request for the configuration file
 type ErrConfigGetHTTP struct {
 	URL    string
 	Status int
@@ -38,19 +38,6 @@ type ErrProxyNoName struct {
 // Error returns the string representation of ErrProxyNoName
 func (e ErrProxyNoName) Error() string {
 	return fmt.Sprintf("config:proxy(#%d) defined without a name", e.Number)
-}
-
-// ErrProxyName is an error struct for a proxy defined with a name that caused
-// an error during validation, caught during the proxy param validation phase
-type ErrProxyName struct {
-	Number int
-	Err    error
-}
-
-// Error returns the string representation of ErrProxyName
-func (e ErrProxyName) Error() string {
-	return fmt.Sprintf("config:proxy(#%d) name caused error during validation: %s",
-		e.Number, e.Err.Error())
 }
 
 // ErrProxyInvalidName is an error struct for a proxy defined with a name that contains
@@ -91,6 +78,18 @@ func (e ErrMissingTileURLTemplate) Error() string {
 		e.ProxyName, e.TileURL, e.Parameter)
 }
 
+// ErrNoCacheEnabled is an error struct thrown when neither
+// the internal nor external cache are enabled
+type ErrNoCacheEnabled struct {
+	ProxyName string
+}
+
+// Error returns the string representation of ErrNoCacheEnabled
+func (e ErrNoCacheEnabled) Error() string {
+	return fmt.Sprintf("config:proxy(%s) must have at least one cache enabled",
+		e.ProxyName)
+}
+
 // ErrInvalidMemCap is an error struct for invalid memory
 // cache capacity, caught during the proxy validation phase
 type ErrInvalidMemCap struct {
@@ -122,6 +121,20 @@ func (e ErrInvalidMemTTL) Error() string {
 type ErrInvalidRedisTTL struct {
 	ProxyName string
 	TTL       string
+}
+
+// ErrInvalidRedisURL is an error struct for invalid redis
+// cache URL, caught during the proxy cache validation phase
+type ErrInvalidRedisURL struct {
+	ProxyName string
+	URL       string
+	Err       error
+}
+
+// Error returns the string representation of ErrInvalidRedisURL
+func (e ErrInvalidRedisURL) Error() string {
+	return fmt.Sprintf("config:proxy(%s):cache invalid Redis URL '%s': %s",
+		e.ProxyName, e.URL, e.Err.Error())
 }
 
 // Error returns the string representation of ErrInvalidRedisTTL
