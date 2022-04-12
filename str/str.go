@@ -74,7 +74,6 @@ const (
 	DCacheSet       = "cache set key=%s len=%d"
 	DCacheMiss      = "cache internal miss key=%s"
 	DCacheMissExt   = "cache external miss key=%s"
-	DCacheFail      = "cache bad value key=%s"
 	DCacheHit       = "cache hit key=%s len=%d"
 	DInvalidateFail = "failed to invalidate tile %s, err=%s"
 )
