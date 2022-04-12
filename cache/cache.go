@@ -3,6 +3,8 @@ package cache
 import (
 	"context"
 	"crypto/tls"
+	"os"
+	"strconv"
 
 	"github.com/allegro/bigcache/v3"
 	"github.com/go-redis/redis/v8"
@@ -146,9 +148,21 @@ func BuildInstance(name string) error {
 
 // initInternal initializes an in-memory cache instance from proxy configuration
 func initInternal(proxy config.Proxy) (*bigcache.BigCache, error) {
+	maxEntrySize := 3
+
+	// allow override of MaxEntrySize via env var
+	if max, present := os.LookupEnv("MAX_ENTRY_SIZE"); present {
+		if maxInt, err := strconv.Atoi(max); err == nil {
+			maxEntrySize = maxInt
+		} else {
+			util.Error(str.CCache, str.ECacheEntry, max)
+		}
+	}
+
 	conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
 	conf.StatsEnabled = !env.IsProd()
 	conf.MaxEntrySize = OneMB * 3
+	conf.MaxEntrySize = OneMB * maxEntrySize
 	conf.HardMaxCacheSize = proxy.Cache.MemCap
 
 	return bigcache.NewBigCache(conf)

@@ -29,6 +29,9 @@ var (
 
 	// File is a reference to the config file path to read from
 	File *string
+
+	// DefaultPort used if none specified in config
+	DefaultPort = 3100
 )
 
 // Capabilities of the LOD instance (the configuration)
@@ -149,11 +152,11 @@ func Load() error {
 		return err
 	}
 
+	// set default cache parameters if not provided
+	setDefaults(&newCapabilities)
+
 	// set capabilities after validation
 	capabilities = newCapabilities
-
-	// set default cache parameters if not provided
-	setDefaults()
 
 	return nil
 }
@@ -190,33 +193,34 @@ func readHttp() ([]byte, error) {
 }
 
 // set default instance and cache properties for read configuration if not provided
-func setDefaults() {
-	if capabilities.Instance.Port == 0 {
-		capabilities.Instance.Port = 3100
+func setDefaults(cap *Capabilities) {
+	if cap.Instance.Port == 0 {
+		cap.Instance.Port = DefaultPort
 	}
 
-	for i := range capabilities.Proxies {
-		if capabilities.Proxies[i].Cache == zeroCache {
-			capabilities.Proxies[i].Cache = defaultCache
+	for i := range cap.Proxies {
+		if cap.Proxies[i].Cache == zeroCache {
+			cap.Proxies[i].Cache = defaultCache
 		}
 
-		if capabilities.Proxies[i].Cache.KeyTemplate == "" {
-			capabilities.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
+		if cap.Proxies[i].Cache.KeyTemplate == "" {
+			cap.Proxies[i].Cache.KeyTemplate = defaultCache.KeyTemplate
 		}
 
-		if capabilities.Proxies[i].PullHeaders == nil {
-			capabilities.Proxies[i].PullHeaders = make([]string, 0)
+		if cap.Proxies[i].PullHeaders == nil {
+			cap.Proxies[i].PullHeaders = make([]string, 0)
 		}
 
 		// Register default content headers
-		capabilities.Proxies[i].registerHeader(fiber.HeaderContentType)
-		capabilities.Proxies[i].registerHeader(fiber.HeaderContentEncoding)
+		cap.Proxies[i].registerHeader(fiber.HeaderContentType)
+		cap.Proxies[i].registerHeader(fiber.HeaderContentEncoding)
 	}
 }
 
 // validateCapabilities validates instance Capabilities for sanity and errors
 func validateCapabilities(c *Capabilities) error {
-	if c.Instance.Port < 1 || c.Instance.Port > 65535 {
+	// allow 0 so that DefaultPort can be used if no port specified
+	if c.Instance.Port < 0 || c.Instance.Port > 65535 {
 		return ErrInvalidPort{Port: c.Instance.Port}
 	}
 
@@ -482,7 +486,7 @@ func validateParams(proxy *Proxy) error {
 }
 
 // GetPort returns the configured primary HTTP port
-// or 3100 if none configured
+// or DefaultPort if none configured
 func GetPort() int {
 	return capabilities.Instance.Port
 }

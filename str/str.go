@@ -35,6 +35,7 @@ const (
 	EConfigNotFound     = "config file not found at path: '%s'"
 	EBadRequest         = "failed to fetch URL parameters, error=%s"
 	ECacheBuildKey      = "failed to build cache key err=%s"
+	ECacheEntry         = "invalid MAX_ENTRY_SIZE (int MB) provided: %s"
 	ECacheFetch         = "failed to fetch tile from cache, key=%s error=%s"
 	ECacheDelete        = "failed to delete tile from cache, key=%s error=%s"
 	ECacheSet           = "failed to set cache entry, key=%s error=%s"
