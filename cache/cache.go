@@ -247,7 +247,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *packet.TilePacket {
 			}
 		}
 
-		hit = " :hit-i"
+		hit = ":hit-i"
 	}
 
 	// try fetching from redis if not present in internal cache
@@ -281,7 +281,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *packet.TilePacket {
 			return nil
 		}
 
-		hit = " :hit-e"
+		hit = ":hit-e"
 	}
 
 	if cachedTile == nil {

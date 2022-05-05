@@ -50,7 +50,7 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 	// calculate url from the configured URL and params
 	tileUrl, err := buildTileUrl(p, ctx)
 	if err != nil {
-		ctx.Locals("lod-cache", " :err ")
+		ctx.Locals("lod-cache", ":err-t")
 		util.Error(str.CProxy, str.EBadRequest, err.Error())
 		return ctx.Status(fiber.StatusBadRequest).SendString("")
 	}
@@ -58,7 +58,7 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 	// calculate the cache key for this request using XYZ and URL params
 	cacheKey, err := helpers.BuildCacheKey(p, ctx)
 	if err != nil {
-		ctx.Locals("lod-cache", "  :err")
+		ctx.Locals("lod-cache", ":err-c")
 		util.Error(str.CProxy, str.ECacheBuildKey, err.Error())
 		return ctx.Status(fiber.StatusInternalServerError).SendString("")
 	}
@@ -70,17 +70,21 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 		}
 	} else {
 		// IF WE MISSED A CACHED TILE
-		ctx.Locals("lod-cache", " :miss ")
+		ctx.Locals("lod-cache", ":miss ")
 
 		// clean up flight group after request is done
 		defer flightGroup.Forget(cacheKey)
 
 		// fetch tile via agent proxy, ensuring only a single request is in flight at a given time
-		response, errProxy, _ := flightGroup.Do(cacheKey, fetchUpstream(tileUrl, p))
+		response, errProxy, waited := flightGroup.Do(cacheKey, fetchUpstream(tileUrl, p))
 
 		if errProxy != nil {
 			// return internal server error status if agent proxy request failed in flight
 			return ctx.Status(fiber.StatusInternalServerError).SendString("")
+		}
+
+		if waited {
+			ctx.Locals("lod-cache", ":hit-w")
 		}
 
 		// cast interface returned from flight group to a proxyResponse
@@ -150,7 +154,7 @@ func returnCachedTile(ctx *fiber.Ctx, p config.Proxy, tileUrl string, cachedTile
 	// write the tile to the response body
 	_, err := ctx.Write(cachedTile.TileData())
 	if err != nil {
-		ctx.Locals("lod-cache", "  :err")
+		ctx.Locals("lod-cache", ":err-w")
 		util.Error(str.CProxy, str.EWrite, err.Error(), tileError{
 			url:   tileUrl,
 			proxy: p,
@@ -246,7 +250,7 @@ func processResponse(ctx *fiber.Ctx, c *cache.Cache, p config.Proxy, cacheKey st
 		// spin off a routine to cache the tile without blocking the response
 		go c.EncodeSet(cacheKey, tileData, headers)
 	} else {
-		ctx.Locals("lod-cache", " :err-u")
+		ctx.Locals("lod-cache", ":err-u")
 		// Send internal server error response with empty body if upstream
 		// fails to respond or responds with a non-200 status code
 		return ctx.Status(fiber.StatusInternalServerError).SendString("")

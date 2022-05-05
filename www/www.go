@@ -85,8 +85,8 @@ func logFormat() string {
 }
 
 const logFormatProd = "${ip} ${header:x-forwarded-for} ${header:x-real-ip} " +
-	"[${time}] ${pid} ${locals:requestid}${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
+	"[${time}] ${pid} ${locals:requestid} ${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
 	"${status} ${latency} ${bytesSent}b \"${referrer}\" \"${ua}\"\n"
 
-const logFormatDev = "${ip} [${time}]${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
+const logFormatDev = "${ip} [${time}] ${locals:lod-cache} \"${method} ${path} ${protocol}\" " +
 	"${status} ${latency} ${bytesSent}b\n"
