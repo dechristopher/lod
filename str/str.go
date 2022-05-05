@@ -55,7 +55,7 @@ const ()
 // (M) Standard info log messages
 const (
 	MDevMode            = "!! DEVELOPER MODE !!"
-	MInit               = "LOD v%s - copyright 2021 Andrew DeChristopher <me@dchr.host>\n"
+	MInit               = "LOD v%s - copyright 2021-2022 Andrew DeChristopher <me@dchr.host>\n"
 	MStarted            = "started in %s [env: %s][http: %d]"
 	MProxy              = "configured proxy [mem: %t / redis: %t][%s] -> %s"
 	MReload             = "reloaded instance capabilities"
