@@ -83,28 +83,11 @@ func (g *Geom) CoordSeq() *CoordSeq {
 	g.context.Lock()
 	defer g.context.Unlock()
 	s := C.GEOSGeom_getCoordSeq_r(g.context.handle, g.geom)
-	if s == nil {
-		panic(g.context.err)
-	}
-	var (
-		dimensions C.uint
-		size       C.uint
-	)
-	if C.GEOSCoordSeq_getDimensions_r(g.context.handle, s, &dimensions) == 0 {
-		panic(g.context.err)
-	}
-	if C.GEOSCoordSeq_getSize_r(g.context.handle, s, &size) == 0 {
-		panic(g.context.err)
-	}
-	// Don't set a finalizer as s is owned by g and will be finalized when g is
+	// Don't set a finalizer as coordSeq is owned by g and will be finalized when g is
 	// finalized.
-	return &CoordSeq{
-		context:    g.context,
-		s:          s,
-		parent:     g,
-		dimensions: int(dimensions),
-		size:       int(size),
-	}
+	coordSeq := g.context.newCoordSeq(s, nil)
+	coordSeq.parent = g
+	return coordSeq
 }
 
 // CoveredBy returns true if g is covered by other.
@@ -181,6 +164,22 @@ func (g *Geom) Disjoint(other *Geom) bool {
 	default:
 		panic(g.context.err)
 	}
+}
+
+// Distance returns the distance between the closest points on g and other.
+func (g *Geom) Distance(other *Geom) float64 {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	var distance float64
+	if C.GEOSDistance_r(g.context.handle, g.geom, other.geom, (*C.double)(&distance)) == 0 {
+		panic(g.context.err)
+	}
+	return distance
 }
 
 // Envelope returns the envelope of g.
@@ -376,6 +375,24 @@ func (g *Geom) IsValidReason() string {
 	}
 	defer C.GEOSFree_r(g.context.handle, unsafe.Pointer(reason))
 	return C.GoString(reason)
+}
+
+// NearestPoints returns the nearest coordinates of g and other. If the nearest
+// coordinates do not exist (e.g., when either geom is empty), it returns nil.
+func (g *Geom) NearestPoints(other *Geom) [][]float64 {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	s := C.GEOSNearestPoints_r(g.context.handle, g.geom, other.geom)
+	if s == nil {
+		return nil
+	}
+	defer C.GEOSCoordSeq_destroy_r(g.context.handle, s)
+	return g.context.newCoordsFromGEOSCoordSeq(s)
 }
 
 // NumGeometries returns the number of geometries in g.

@@ -28,7 +28,7 @@ github.com/go-redis/redis/v8/internal/pool
 github.com/go-redis/redis/v8/internal/proto
 github.com/go-redis/redis/v8/internal/rand
 github.com/go-redis/redis/v8/internal/util
-# github.com/gofiber/fiber/v2 v2.31.0
+# github.com/gofiber/fiber/v2 v2.33.0
 ## explicit; go 1.16
 github.com/gofiber/fiber/v2
 github.com/gofiber/fiber/v2/internal/bytebufferpool
@@ -36,15 +36,6 @@ github.com/gofiber/fiber/v2/internal/colorable
 github.com/gofiber/fiber/v2/internal/dictpool
 github.com/gofiber/fiber/v2/internal/fasttemplate
 github.com/gofiber/fiber/v2/internal/fwd
-github.com/gofiber/fiber/v2/internal/go-json
-github.com/gofiber/fiber/v2/internal/go-json/decoder
-github.com/gofiber/fiber/v2/internal/go-json/encoder
-github.com/gofiber/fiber/v2/internal/go-json/encoder/vm
-github.com/gofiber/fiber/v2/internal/go-json/encoder/vm_color
-github.com/gofiber/fiber/v2/internal/go-json/encoder/vm_color_indent
-github.com/gofiber/fiber/v2/internal/go-json/encoder/vm_indent
-github.com/gofiber/fiber/v2/internal/go-json/errors
-github.com/gofiber/fiber/v2/internal/go-json/runtime
 github.com/gofiber/fiber/v2/internal/isatty
 github.com/gofiber/fiber/v2/internal/msgp
 github.com/gofiber/fiber/v2/internal/schema
@@ -62,8 +53,8 @@ github.com/golang/protobuf/ptypes/timestamp
 # github.com/joho/godotenv v1.4.0
 ## explicit; go 1.12
 github.com/joho/godotenv
-# github.com/klauspost/compress v1.15.1
-## explicit; go 1.15
+# github.com/klauspost/compress v1.15.3
+## explicit; go 1.16
 github.com/klauspost/compress/flate
 github.com/klauspost/compress/gzip
 github.com/klauspost/compress/zlib
@@ -82,7 +73,7 @@ github.com/prometheus/client_golang/prometheus/promhttp
 # github.com/prometheus/client_model v0.2.0
 ## explicit; go 1.9
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.33.0
+# github.com/prometheus/common v0.34.0
 ## explicit; go 1.15
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
@@ -92,13 +83,13 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/twpayne/go-geos v0.2.0
+# github.com/twpayne/go-geos v0.3.0
 ## explicit; go 1.17
 github.com/twpayne/go-geos
 # github.com/valyala/bytebufferpool v1.0.0
 ## explicit
 github.com/valyala/bytebufferpool
-# github.com/valyala/fasthttp v1.35.0
+# github.com/valyala/fasthttp v1.36.0
 ## explicit; go 1.15
 github.com/valyala/fasthttp
 github.com/valyala/fasthttp/fasthttpadaptor
@@ -108,10 +99,10 @@ github.com/valyala/fasthttp/stackless
 # github.com/valyala/tcplisten v1.0.0
 ## explicit; go 1.12
 github.com/valyala/tcplisten
-# golang.org/x/sync v0.0.0-20201207232520-09787c993a3a
+# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
+# golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
