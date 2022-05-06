@@ -148,7 +148,7 @@ func BuildInstance(name string) error {
 
 // initInternal initializes an in-memory cache instance from proxy configuration
 func initInternal(proxy config.Proxy) (*bigcache.BigCache, error) {
-	maxEntrySize := 3
+	maxEntrySize := 4
 
 	// allow override of MaxEntrySize via env var
 	if max, present := os.LookupEnv("MAX_ENTRY_SIZE"); present {
@@ -161,7 +161,6 @@ func initInternal(proxy config.Proxy) (*bigcache.BigCache, error) {
 
 	conf := bigcache.DefaultConfig(proxy.Cache.MemTTLDuration)
 	conf.StatsEnabled = !env.IsProd()
-	conf.MaxEntrySize = OneMB * 3
 	conf.MaxEntrySize = OneMB * maxEntrySize
 	conf.HardMaxCacheSize = proxy.Cache.MemCap
 
