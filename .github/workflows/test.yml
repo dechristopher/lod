@@ -7,12 +7,12 @@ jobs:
   test-lod-ubuntu-latest:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Set up Go 1.17
+    - name: Set up Go 1.18.1
       uses: actions/setup-go@v2
       with:
-        go-version: 1.17
+        go-version: 1.18.1
 
     - name: Install GEOS
       run: sudo apt update && sudo apt -y install libgeos++-dev libgeos-3.8.0 libgeos-c1v5 libgeos-dev libgeos-doc
