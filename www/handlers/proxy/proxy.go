@@ -6,7 +6,6 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/sync/singleflight"
-	_ "golang.org/x/sync/singleflight"
 
 	"github.com/dechristopher/lod/cache"
 	"github.com/dechristopher/lod/config"
