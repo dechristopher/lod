@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -32,6 +33,49 @@ func GetTile(ctx *fiber.Ctx) (*tile.Tile, error) {
 		Y:    y,
 		Zoom: zoom,
 	}, nil
+}
+
+// BuildTileUrl will substitute URL tile params into the proxy tile URL
+func BuildTileUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
+	currentTile, err := GetTile(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// replace XYZ values in the tile URL
+	baseUrl := currentTile.InjectString(proxy.TileURL)
+
+	// replace dynamic endpoint parameter in URL if configured
+	if proxy.HasEndpointParam {
+		endpoint := ctx.Params("e")
+		baseUrl = strings.ReplaceAll(baseUrl, tile.EndpointTemplate, endpoint)
+	}
+
+	// fetch params from context for possible addition to URL
+	paramsMap := GetParamsFromCtx(ctx)
+
+	// if no query parameters, return baseUrl
+	if paramsMap == nil {
+		return baseUrl, nil
+	}
+
+	// parse baseURL to add URL parameters
+	paramUrl, err := url.Parse(baseUrl)
+	if err != nil {
+		return "", err
+	}
+
+	params := url.Values{}
+	// replace params by name in the key template if any exist
+	for param, val := range paramsMap {
+		params.Add(param, val)
+	}
+
+	// set encoded params in URL
+	paramUrl.RawQuery = params.Encode()
+
+	// return generated URL with substitutions for query parameters
+	return paramUrl.String(), nil
 }
 
 // BuildCacheKey will put together a cache key from the configured template

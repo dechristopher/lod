@@ -1,9 +1,6 @@
 package proxy
 
 import (
-	"net/url"
-	"strings"
-
 	"github.com/gofiber/fiber/v2"
 	"golang.org/x/sync/singleflight"
 
@@ -12,7 +9,6 @@ import (
 	"github.com/dechristopher/lod/helpers"
 	"github.com/dechristopher/lod/packet"
 	"github.com/dechristopher/lod/str"
-	"github.com/dechristopher/lod/tile"
 	"github.com/dechristopher/lod/util"
 )
 
@@ -46,22 +42,13 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 	// their values in a map within the request locals
 	helpers.FillParamsMap(p, ctx)
 
-	// calculate url from the configured URL and params
-	tileUrl, err := buildTileUrl(p, ctx)
+	// build tileUrl and cacheKey from request context and config
+	tileUrl, cacheKey, err := buildKeyAndUrl(p, ctx)
 	if err != nil {
-		ctx.Locals("lod-cache", ":err-t")
-		util.Error(str.CProxy, str.EBadRequest, err.Error())
-		return ctx.Status(fiber.StatusBadRequest).SendString("")
+		return err
 	}
 
-	// calculate the cache key for this request using XYZ and URL params
-	cacheKey, err := helpers.BuildCacheKey(p, ctx)
-	if err != nil {
-		ctx.Locals("lod-cache", ":err-c")
-		util.Error(str.CProxy, str.ECacheBuildKey, err.Error())
-		return ctx.Status(fiber.StatusInternalServerError).SendString("")
-	}
-
+	// attempt to fetch the tile from cache before hitting the upstream
 	if cachedTile := c.Fetch(cacheKey, ctx); cachedTile != nil {
 		// IF WE HIT A CACHED TILE
 		if err = returnCachedTile(ctx, p, tileUrl, cachedTile); err != nil {
@@ -94,58 +81,36 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 
-		if err := processResponse(ctx, c, p, cacheKey, proxyResp); err != nil {
+		if err = processResponse(ctx, c, p, cacheKey, proxyResp); err != nil {
 			return err
 		}
 	}
 
 	// Remove server header from response
 	ctx.Response().Header.Del(fiber.HeaderServer)
-
 	return nil
 }
 
-// buildTileUrl will substitute URL tile params into the proxy tile URL
-func buildTileUrl(proxy config.Proxy, ctx *fiber.Ctx) (string, error) {
-	currentTile, err := helpers.GetTile(ctx)
+// buildKeyAndUrl returns the upstream tile URL and cache key using the given
+// proxy configuration and fiber request context
+func buildKeyAndUrl(p config.Proxy, ctx *fiber.Ctx) (string, string, error) {
+	// calculate url from the configured URL and params
+	tileUrl, err := helpers.BuildTileUrl(p, ctx)
 	if err != nil {
-		return "", err
+		ctx.Locals("lod-cache", ":err-t")
+		util.Error(str.CProxy, str.EBadRequest, err.Error())
+		return "", "", ctx.Status(fiber.StatusBadRequest).SendString("")
 	}
 
-	// replace XYZ values in the tile URL
-	baseUrl := currentTile.InjectString(proxy.TileURL)
-
-	// replace dynamic endpoint parameter in URL if configured
-	if proxy.HasEndpointParam {
-		endpoint := ctx.Params("e")
-		baseUrl = strings.ReplaceAll(baseUrl, tile.EndpointTemplate, endpoint)
-	}
-
-	// fetch params from context for possible addition to URL
-	paramsMap := helpers.GetParamsFromCtx(ctx)
-
-	// if no query parameters, return baseUrl
-	if paramsMap == nil {
-		return baseUrl, nil
-	}
-
-	// parse baseURL to add URL parameters
-	paramUrl, err := url.Parse(baseUrl)
+	// calculate the cache key for this request using XYZ and URL params
+	cacheKey, err := helpers.BuildCacheKey(p, ctx)
 	if err != nil {
-		return "", err
+		ctx.Locals("lod-cache", ":err-c")
+		util.Error(str.CProxy, str.ECacheBuildKey, err.Error())
+		return "", "", ctx.Status(fiber.StatusInternalServerError).SendString("")
 	}
 
-	params := url.Values{}
-	// replace params by name in the key template if any exist
-	for param, val := range paramsMap {
-		params.Add(param, val)
-	}
-
-	// set encoded params in URL
-	paramUrl.RawQuery = params.Encode()
-
-	// return generated URL with substitutions for query parameters
-	return paramUrl.String(), nil
+	return tileUrl, cacheKey, nil
 }
 
 // returnCachedTile is called if the cache contains the requested tile
