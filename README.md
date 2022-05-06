@@ -36,15 +36,15 @@
   </a>
 </p>
 
-LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a 
-slim authentication backend. It will sit in front of any tile server and will 
+LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a
+slim authentication backend. It will sit in front of any tile server and will
 aggressively cache tiles in memory, optionally storing them in a configured
 Redis cluster for faster fetching later. LOD is cluster-aware and uses Redis
 message queueing for intra-cluster communication when multiple instances are
 deployed together.
 
-LOD is written in Go 1.17 using [fiber](https://github.com/gofiber/fiber). TOML
-is used for configuration. Go templates are used for templating. Internal 
+LOD is written in Go 1.18.1 using [fiber](https://github.com/gofiber/fiber). TOML
+is used for configuration. Go templates are used for templating. Internal
 in-memory caching is built upon the [bigcache](https://github.com/allegro/bigcache)
 library by [allegro](https://github.com/allegro).
 
@@ -72,7 +72,7 @@ Or just use our Docker image!
 You can create your own Dockerfile that adds a `config.toml` from the context
 into the config directory, like so:
 ```Dockerfile
-FROM tilefund/lod:0.6.0
+FROM dechristopher/lod:0.8.0
 COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
 CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
 ```
@@ -85,9 +85,9 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
 ## Core Principles
 
 - Lightweight, parallel, and non-blocking
-- Tileserver agnostic (Tegola, flat file NGINX, etc.)
+- Tileserver agnostic (Martin, Tegola, flat file NGINX, etc.)
 - Tile format and content agnostic
-  - Vector ([Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec) 
+  - Vector ([Mapbox Vector Tiles](https://github.com/mapbox/vector-tile-spec)
     or [other vector formats](https://wiki.openstreetmap.org/wiki/Vector_tiles))
   - Raster (PNG/JPG/TIFF)
   - And [more](https://wiki.openstreetmap.org/wiki/Tiles)...
@@ -112,10 +112,10 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
   - [ ] Tiles per second (load averages)
   - [ ] Tile upstream fetch times (avg, 75th, 99th)
   - [X] Expose Prometheus endpoint
-- [ ] Supports multiple configured tileserver proxies
+- [X] Supports multiple configured tileserver proxies
   - [X] Separate authentication (bearer tokens and CORS)
   - [X] Separate internal cache instances per proxy
-  - [ ] Separate stats tracking
+  - [X] Separate stats tracking
 - [ ] Administrative endpoints
   - [X] Security via Bearer Token Authorization
   - [X] Reload the instance configuration
