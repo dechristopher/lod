@@ -78,6 +78,8 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 			return ctx.Next()
 		}
 
+		ctx.Locals("lod-cache", ":nauth")
+
 		if !env.IsProd() {
 			// provide useful error messages when running in dev mode
 			return ctx.Status(fiber.StatusUnauthorized).JSON(map[string]string{
