@@ -44,28 +44,45 @@ func Wire(r *fiber.App) {
 	// return stats for all caches
 	adminGroup.Get("/stats", Stats)
 
-	// return stats for a cache by name
-	adminGroup.Get("/:name/stats", Stats)
-
 	// flush the in-memory caches of all proxies
 	adminGroup.Get("/flush", Flush)
 
+	// Wire up named endpoints for each configured proxy
+	for _, proxy := range config.Get().Proxies {
+		namedAdminGroup := adminGroup.Group(proxy.Name)
+
+		// add cache name middleware to named handler group
+		namedAdminGroup.Use(middleware.GenCacheNameMiddleware(proxy.Name))
+
+		for path, handler := range namedEndpoints {
+			handlerPath := path
+			// if dynamic endpoint configured, add endpoint path parameter
+			if proxy.HasEndpointParam {
+				handlerPath = "/:e" + handlerPath
+			}
+
+			// configure proxy endpoint genHandler
+			namedAdminGroup.Get(handlerPath, handler)
+		}
+	}
+}
+
+// namedEndpoints is a map of proxy-specific handler functions and their paths
+var namedEndpoints = map[string]fiber.Handler{
+	// return stats for a cache by name
+	"/stats": Stats,
 	// flush the in-memory cache of a proxy by name
-	adminGroup.Get("/:name/flush", Flush)
-
+	"/flush": Flush,
 	// invalidate a given tile without re-priming
-	adminGroup.Get("/:name/invalidate/:z/:x/:y", InvalidateTile)
-
+	"/invalidate/:z/:x/:y": InvalidateTile,
 	// invalidate a given tile and all of its children up to a given max
 	// maxZoom defaults to zoom level 12
-	adminGroup.Get("/:name/invalidate/deep/:z/:x/:y", InvalidateTileDeep)
-	adminGroup.Get("/:name/invalidate/deep/:z/:x/:y/:maxZoom", InvalidateTileDeep)
-
+	"/invalidate/deep/:z/:x/:y":          InvalidateTileDeep,
+	"/invalidate/deep/:z/:x/:y/:maxZoom": InvalidateTileDeep,
 	// invalidate and prime a given tile
-	adminGroup.Get("/:name/prime/:z/:x/:y", PrimeTile)
-
+	"/prime/:z/:x/:y": PrimeTile,
 	// invalidate and prime a given tile and all of its children up to a given max
 	// maxZoom defaults to zoom level 12
-	adminGroup.Get("/:name/prime/deep/:z/:x/:y", PrimeTileDeep)
-	adminGroup.Get("/:name/prime/deep/:z/:x/:y/:maxZoom", PrimeTileDeep)
+	"/prime/deep/:z/:x/:y":          PrimeTileDeep,
+	"/prime/deep/:z/:x/:y/:maxZoom": PrimeTileDeep,
 }

@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dechristopher/lod/config"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 
+	"github.com/dechristopher/lod/config"
 	"github.com/dechristopher/lod/env"
+	"github.com/dechristopher/lod/str"
 )
 
 // Wire attaches all middleware to the given router
@@ -56,6 +57,16 @@ const (
 	Query AuthType = "query"
 )
 
+// GenCacheNameMiddleware builds a middleware that adds the proxy name to the
+// request context locals so that named admin endpoints can look up the proxy
+// they handle requests for
+func GenCacheNameMiddleware(cacheName string) fiber.Handler {
+	return func(ctx *fiber.Ctx) error {
+		ctx.Locals(str.LocalCacheName, cacheName)
+		return ctx.Next()
+	}
+}
+
 // GenAuthMiddleware builds a middleware that checks for valid tokens
 func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Handler {
 	bearer := fmt.Sprintf("Bearer %s", token)
@@ -64,7 +75,7 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 
 	if authType == Bearer {
 		authCheck = func(ctx *fiber.Ctx, token string) bool {
-			return ctx.GetReqHeaders()["Authorization"] == bearer
+			return ctx.GetReqHeaders()[fiber.HeaderAuthorization] == bearer
 		}
 	} else {
 		authCheck = func(ctx *fiber.Ctx, token string) bool {
@@ -78,7 +89,7 @@ func GenAuthMiddleware(token string, authType AuthType, notFound bool) fiber.Han
 			return ctx.Next()
 		}
 
-		ctx.Locals("lod-cache", ":nauth")
+		ctx.Locals(str.LocalCacheStatus, ":nauth")
 
 		if !env.IsProd() {
 			// provide useful error messages when running in dev mode

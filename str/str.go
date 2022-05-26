@@ -19,6 +19,25 @@ const (
 	ErrorFormat = "ERR [%s] %s\n"
 )
 
+// EndpointTemplate is a template string used to define dynamic endpoints in
+// proxy url configurations
+const EndpointTemplate = "{e}"
+
+// (L) Fiber context locals
+const (
+	LocalCacheStatus = "lod-cache"
+	LocalCacheName   = "cacheName"
+	LocalParams      = "params"
+)
+
+// (P) Parameter names
+const (
+	ParamEndpoint = "e"
+	ParamZ        = "z"
+	ParamY        = "y"
+	ParamX        = "x"
+)
+
 // (C) Log caller names
 const (
 	CMain  = "LOD"
@@ -75,6 +94,8 @@ const (
 	DCacheMiss      = "cache internal miss key=%s"
 	DCacheMissExt   = "cache external miss key=%s"
 	DCacheHit       = "cache hit key=%s len=%d"
+	DCalcTiles      = "admin: proxy %s: depth search found %d tiles from via %s to depth %d"
+	DPrimeFail      = "failed to prime tile %s, err=%s"
 	DInvalidateFail = "failed to invalidate tile %s, err=%s"
 )
 

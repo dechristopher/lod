@@ -14,7 +14,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/dechristopher/lod/env"
-	"github.com/dechristopher/lod/tile"
+	"github.com/dechristopher/lod/str"
 	"github.com/dechristopher/lod/util"
 )
 
@@ -32,6 +32,9 @@ var (
 
 	// DefaultPort used if none specified in config
 	DefaultPort = 3100
+
+	// default number of cache workers
+	defaultNumWorkers = 8
 )
 
 // Capabilities of the LOD instance (the configuration)
@@ -60,6 +63,7 @@ type Proxy struct {
 	DeleteHeaders    []string `json:"del_headers" toml:"del_headers"`   // headers to exclude from the tileserver response
 	AddHeaders       []Header `json:"add_headers" toml:"add_headers"`   // headers to inject into upstream requests to tileserver
 	AccessToken      string   `json:"-" toml:"access_token"`            // optional access token for incoming requests
+	NumWorkers       int      `json:"num_workers" toml:"num_workers"`   // optionally limit number of cache workers for priming and invalidation jobs
 	Params           []Param  `json:"params" toml:"params"`             // URL query parameter configurations for this instance
 	Cache            Cache    `json:"cache" toml:"cache"`               // cache configuration for this proxy instance
 }
@@ -211,6 +215,10 @@ func setDefaults(cap *Capabilities) {
 			cap.Proxies[i].PullHeaders = make([]string, 0)
 		}
 
+		if cap.Proxies[i].NumWorkers <= 0 {
+			cap.Proxies[i].NumWorkers = defaultNumWorkers
+		}
+
 		// Register default content headers
 		cap.Proxies[i].registerHeader(fiber.HeaderContentType)
 		cap.Proxies[i].registerHeader(fiber.HeaderContentEncoding)
@@ -294,7 +302,7 @@ func validateProxy(num int, proxy *Proxy) error {
 	}
 
 	// reflect presence of dynamic endpoint template in HasEndpointParam
-	proxy.HasEndpointParam = strings.Contains(proxy.TileURL, tile.EndpointTemplate)
+	proxy.HasEndpointParam = strings.Contains(proxy.TileURL, str.EndpointTemplate)
 
 	if !strings.Contains(proxy.TileURL, "{z}") {
 		return ErrMissingTileURLTemplate{

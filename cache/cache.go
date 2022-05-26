@@ -290,7 +290,7 @@ func (c *Cache) Fetch(key string, ctx *fiber.Ctx) *packet.TilePacket {
 		return nil
 	}
 
-	ctx.Locals("lod-cache", hit)
+	ctx.Locals(str.LocalCacheStatus, hit)
 	c.Metrics.CacheHits.Inc()
 
 	// wrap bytes in TilePacket container

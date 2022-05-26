@@ -2,7 +2,9 @@ package admin
 
 import (
 	"github.com/gofiber/fiber/v2"
+
 	"github.com/dechristopher/lod/cache"
+	"github.com/dechristopher/lod/str"
 	"github.com/dechristopher/lod/util"
 )
 
@@ -24,13 +26,14 @@ type fetch struct {
 
 // Stats returns stats for a cache by name, or all caches
 func Stats(ctx *fiber.Ctx) error {
+	// TODO implement global stats
 	if ctx.Path() == "/admin/stats" {
 		return ctx.JSON(map[string]string{
 			"stats": "all",
 		})
 	}
 
-	name := ctx.Params("name")
+	name := ctx.Locals(str.LocalCacheName).(string)
 	if name == "" {
 		// quit early if no name provided
 		return ctx.Status(fiber.StatusBadRequest).JSON(map[string]string{

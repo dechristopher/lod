@@ -30,7 +30,7 @@ func Flush(ctx *fiber.Ctx) error {
 		})
 	}
 
-	name := ctx.Params("name")
+	name := ctx.Locals(str.LocalCacheName).(string)
 	if name == "" {
 		// quit early if no name provided
 		return ctx.Status(fiber.StatusBadRequest).JSON(map[string]string{
