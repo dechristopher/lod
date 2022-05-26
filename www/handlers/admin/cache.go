@@ -146,22 +146,22 @@ type tileWorkerPayload struct {
 func tileWorker(payload tileWorkerPayload) {
 	defer payload.waitGroup.Done()
 
-	for t := range payload.jobs {
-		url, err := helpers.BuildTileUrl(*payload.cache.Proxy, payload.ctx, t)
+	for tileJob := range payload.jobs {
+		url, err := helpers.BuildTileUrl(*payload.cache.Proxy, payload.ctx, tileJob)
 		if err != nil {
-			util.Debug(str.CAdmin, str.DPrimeFail, t.String(), err.Error())
+			util.Debug(str.CAdmin, str.DPrimeFail, tileJob.String(), err.Error())
 			continue
 		}
 
-		cacheKey, err := helpers.BuildCacheKey(*payload.cache.Proxy, payload.ctx, t)
+		cacheKey, err := helpers.BuildCacheKey(*payload.cache.Proxy, payload.ctx, tileJob)
 		if err != nil {
-			util.Debug(str.CAdmin, str.DPrimeFail, t.String(), err.Error())
+			util.Debug(str.CAdmin, str.DPrimeFail, tileJob.String(), err.Error())
 			continue
 		}
 
 		response, errProxy := helpers.FetchUpstream(url, *payload.cache.Proxy)()
 		if errProxy != nil {
-			util.Debug(str.CAdmin, str.DPrimeFail, t.String(), err.Error())
+			util.Debug(str.CAdmin, str.DPrimeFail, tileJob.String(), err.Error())
 			continue
 		}
 
@@ -170,7 +170,7 @@ func tileWorker(payload tileWorkerPayload) {
 
 		// sanity check to ensure cast worked properly
 		if !ok {
-			util.Debug(str.CAdmin, str.DPrimeFail, t.String(), err.Error())
+			util.Debug(str.CAdmin, str.DPrimeFail, tileJob.String(), err.Error())
 			continue
 		}
 

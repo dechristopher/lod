@@ -38,17 +38,17 @@ func GetTile(ctx *fiber.Ctx) (*tile.Tile, error) {
 }
 
 // BuildTileUrl will substitute URL tile params into the proxy tile URL
-func BuildTileUrl(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, error) {
+func BuildTileUrl(proxy config.Proxy, ctx *fiber.Ctx, tileOverride ...tile.Tile) (string, error) {
 	var currentTile *tile.Tile
 	var err error
 
-	if len(t) == 0 || t == nil {
+	if len(tileOverride) == 0 || tileOverride == nil {
 		currentTile, err = GetTile(ctx)
 		if err != nil {
 			return "", err
 		}
 	} else {
-		currentTile = &t[0]
+		currentTile = &tileOverride[0]
 	}
 
 	// replace XYZ values in the tile URL
@@ -88,17 +88,17 @@ func BuildTileUrl(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, e
 }
 
 // BuildCacheKey will put together a cache key from the configured template
-func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, t ...tile.Tile) (string, error) {
+func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, tileOverride ...tile.Tile) (string, error) {
 	var currentTile *tile.Tile
 	var err error
 
-	if len(t) == 0 || t == nil {
+	if len(tileOverride) == 0 || tileOverride == nil {
 		currentTile, err = GetTile(ctx)
 		if err != nil {
 			return "", err
 		}
 	} else {
-		currentTile = &t[0]
+		currentTile = &tileOverride[0]
 	}
 
 	// replace XYZ values in the key template
