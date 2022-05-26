@@ -66,15 +66,15 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 
 	if !payload.Prime {
 		// simply invalidate en masse
-		for _, t := range tiles {
-			key, err := helpers.BuildCacheKey(*c.Proxy, ctx, t)
+		for _, tileToInvalidate := range tiles {
+			key, err := helpers.BuildCacheKey(*c.Proxy, ctx, tileToInvalidate)
 			if err != nil {
-				util.Debug(str.CAdmin, str.DInvalidateFail, reqTile.String(), err.Error())
+				util.Debug(str.CAdmin, str.DInvalidateFail, tileToInvalidate.String(), err.Error())
 				continue
 			}
 			errInv := c.Invalidate(key, ctx.Context())
 			if errInv != nil {
-				util.Debug(str.CAdmin, str.DInvalidateFail, reqTile.String(), errInv)
+				util.Debug(str.CAdmin, str.DInvalidateFail, tileToInvalidate.String(), errInv)
 			}
 			succeeded++
 		}
