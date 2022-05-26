@@ -35,7 +35,7 @@ func InvalidateAndPrime(ctx *fiber.Ctx, payload invalidateAndPrimePayload) error
 	helpers.FillParamsMap(*c.Proxy, ctx)
 
 	// get requested reqTile from context
-	reqTile, err := helpers.GetTile(ctx)
+	reqTile, err := tile.Get(ctx)
 	if err != nil {
 		util.Error(str.CAdmin, payload.ErrorMessage, "unknown", err.Error())
 		return ctx.Status(fiber.StatusBadRequest).JSON(map[string]string{

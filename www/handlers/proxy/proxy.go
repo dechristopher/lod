@@ -39,14 +39,15 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 	// build tileUrl and cacheKey from request context and config
 	tileUrl, cacheKey, err := buildKeyAndUrl(p, ctx)
 	if err != nil {
-		return err
+		// buildKeyAndUrl log their own errors, so no need to here
+		return ctx.Status(fiber.StatusBadRequest).SendString("")
 	}
 
 	// attempt to fetch the tile from cache before hitting the upstream
 	if cachedTile := c.Fetch(cacheKey, ctx); cachedTile != nil {
 		// IF WE HIT A CACHED TILE
 		if err = returnCachedTile(ctx, p, tileUrl, cachedTile); err != nil {
-			return err
+			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 	} else {
 		// IF WE MISSED A CACHED TILE
@@ -60,6 +61,8 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 
 		if errProxy != nil {
 			// return internal server error status if agent proxy request failed in flight
+			util.Error(str.CProxy, str.EProxyAgentError, p.Name, cacheKey, errProxy.Error())
+			ctx.Locals(str.LocalCacheStatus, ":err-a")
 			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 
@@ -70,8 +73,10 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 		// cast interface returned from flight group to a proxyResponse
 		proxyResp, ok := response.(helpers.ProxyResponse)
 
+		// sanity check to ensure cast worked properly
 		if !ok {
-			// sanity check to ensure cast worked properly
+			util.Error(str.CProxy, str.EProxyBadCast, p.Name, cacheKey)
+			ctx.Locals(str.LocalCacheStatus, ":err-i")
 			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 
@@ -84,12 +89,14 @@ func handle(p config.Proxy, c *cache.Cache, ctx *fiber.Ctx) error {
 			Response:  proxyResp,
 			WriteData: true,
 		}); err != nil {
-			return err
+			util.Error(str.CProxy, str.EProxyWrite, p.Name, cacheKey, err.Error())
+			ctx.Locals(str.LocalCacheStatus, ":err-u")
+			// Send internal server error response with empty body if upstream
+			// fails to respond or responds with a non-200 status code
+			return ctx.Status(fiber.StatusInternalServerError).SendString("")
 		}
 	}
 
-	// Remove server header from response
-	ctx.Response().Header.Del(fiber.HeaderServer)
 	return nil
 }
 
@@ -100,8 +107,8 @@ func buildKeyAndUrl(p config.Proxy, ctx *fiber.Ctx) (string, string, error) {
 	tileUrl, err := helpers.BuildTileUrl(p, ctx)
 	if err != nil {
 		ctx.Locals(str.LocalCacheStatus, ":err-t")
-		util.Error(str.CProxy, str.EBadRequest, err.Error())
-		return "", "", ctx.Status(fiber.StatusBadRequest).SendString("")
+		util.Error(str.CProxy, str.ECacheBuildTileUrl, err.Error())
+		return "", "", err
 	}
 
 	// calculate the cache key for this request using XYZ and URL params
@@ -109,7 +116,7 @@ func buildKeyAndUrl(p config.Proxy, ctx *fiber.Ctx) (string, string, error) {
 	if err != nil {
 		ctx.Locals(str.LocalCacheStatus, ":err-c")
 		util.Error(str.CProxy, str.ECacheBuildKey, err.Error())
-		return "", "", ctx.Status(fiber.StatusInternalServerError).SendString("")
+		return "", "", err
 	}
 
 	return tileUrl, cacheKey, nil
@@ -125,7 +132,7 @@ func returnCachedTile(ctx *fiber.Ctx, p config.Proxy, tileUrl string, cachedTile
 			url:   tileUrl,
 			proxy: p,
 		})
-		return ctx.Status(fiber.StatusInternalServerError).SendString("")
+		return err
 	}
 
 	// set stored headers in response

@@ -1,7 +1,10 @@
 package admin
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 
@@ -34,6 +37,12 @@ func Wire(r *fiber.App) {
 
 	// JSON service health / status handler
 	adminGroup.Get("/status", Status)
+
+	// Fiber monitor handler
+	adminGroup.Get("/monitor", monitor.New(monitor.Config{
+		Title:   "LOD Instance Monitor",
+		Refresh: time.Second,
+	}))
 
 	// capabilities endpoint shows configuration summary
 	adminGroup.Get("/capabilities", Capabilities)

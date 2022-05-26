@@ -13,37 +13,13 @@ import (
 	"github.com/dechristopher/lod/tile"
 )
 
-// GetTile computes the tile from the request URL
-func GetTile(ctx *fiber.Ctx) (*tile.Tile, error) {
-	x, xErr := ctx.ParamsInt(str.ParamX)
-	if xErr != nil {
-		return nil, xErr
-	}
-
-	y, yErr := ctx.ParamsInt(str.ParamY)
-	if yErr != nil {
-		return nil, yErr
-	}
-
-	zoom, zErr := ctx.ParamsInt(str.ParamZ)
-	if zErr != nil {
-		return nil, zErr
-	}
-
-	return &tile.Tile{
-		X:    x,
-		Y:    y,
-		Zoom: zoom,
-	}, nil
-}
-
 // BuildTileUrl will substitute URL tile params into the proxy tile URL
 func BuildTileUrl(proxy config.Proxy, ctx *fiber.Ctx, tileOverride ...tile.Tile) (string, error) {
 	var currentTile *tile.Tile
 	var err error
 
 	if len(tileOverride) == 0 || tileOverride == nil {
-		currentTile, err = GetTile(ctx)
+		currentTile, err = tile.Get(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -93,7 +69,7 @@ func BuildCacheKey(proxy config.Proxy, ctx *fiber.Ctx, tileOverride ...tile.Tile
 	var err error
 
 	if len(tileOverride) == 0 || tileOverride == nil {
-		currentTile, err = GetTile(ctx)
+		currentTile, err = tile.Get(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -221,9 +197,6 @@ type ProcessResponsePayload struct {
 // ProcessResponse will cache fetched tile data, wrangle headers, and return the
 // tile body in the provided fiber request context
 func ProcessResponse(payload ProcessResponsePayload) error {
-	// release response allocation back to memory pool for reuse
-	// defer fiber.ReleaseResponse(payload.Response.Resp)
-
 	// make sure a common 2XX response is received with relevant data, otherwise
 	// we complain and throw a 500 due to misconfiguration of the proxy
 	if payload.Response.Code == fiber.StatusNoContent || (len(payload.Response.Body) > 0 && payload.Response.Code == fiber.StatusOK) {
@@ -257,15 +230,6 @@ func ProcessResponse(payload ProcessResponsePayload) error {
 		// spin off a routine to cache the tile without blocking the response
 		go payload.Cache.EncodeSet(payload.CacheKey, tileData, headers)
 	} else {
-		// return an error to the parent fiber request if running in write mode
-		if payload.WriteData {
-			payload.Ctx.Locals(str.LocalCacheStatus, ":err-u")
-			// Send internal server error response with empty body if upstream
-			// fails to respond or responds with a non-200 status code
-			return payload.Ctx.Status(fiber.StatusInternalServerError).SendString("")
-		}
-
-		//return generic error for non-proxy callers
 		return ErrInvalidStatusCode{
 			StatusCode: payload.Response.Code,
 			CacheKey:   payload.CacheKey,

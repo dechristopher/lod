@@ -7,7 +7,10 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/gofiber/fiber/v2"
 	"github.com/twpayne/go-geos"
+
+	"github.com/dechristopher/lod/str"
 )
 
 // Tile represents a request for a single tile by layer class
@@ -15,6 +18,30 @@ type Tile struct {
 	X    int
 	Y    int
 	Zoom int
+}
+
+// Get computes and returns the tile from the request URL
+func Get(ctx *fiber.Ctx) (*Tile, error) {
+	x, xErr := ctx.ParamsInt(str.ParamX)
+	if xErr != nil {
+		return nil, xErr
+	}
+
+	y, yErr := ctx.ParamsInt(str.ParamY)
+	if yErr != nil {
+		return nil, yErr
+	}
+
+	zoom, zErr := ctx.ParamsInt(str.ParamZ)
+	if zErr != nil {
+		return nil, zErr
+	}
+
+	return &Tile{
+		X:    x,
+		Y:    y,
+		Zoom: zoom,
+	}, nil
 }
 
 func (t Tile) String() string {

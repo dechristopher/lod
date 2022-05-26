@@ -21,6 +21,7 @@ func Serve() {
 	r := fiber.New(fiber.Config{
 		CaseSensitive:         true,
 		DisableStartupMessage: true,
+		ServerHeader:          "",
 		ProxyHeader:           "X-Forwarded-For",
 		ReadTimeout:           time.Second * 2,
 		WriteTimeout:          time.Second * 30,
