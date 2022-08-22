@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download version artifact
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: version
 
@@ -89,7 +89,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download version artifact
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: version
 
@@ -148,7 +148,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Download version artifact
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           name: version
 
