@@ -12,7 +12,7 @@ require (
 	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/client_model v0.2.0
 	github.com/twpayne/go-geos v0.3.0
-	github.com/valyala/fasthttp v1.37.0
+	github.com/valyala/fasthttp v1.39.0
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 )
 

@@ -99,7 +99,7 @@ github.com/twpayne/go-geos
 # github.com/valyala/bytebufferpool v1.0.0
 ## explicit
 github.com/valyala/bytebufferpool
-# github.com/valyala/fasthttp v1.37.0
+# github.com/valyala/fasthttp v1.39.0
 ## explicit; go 1.15
 github.com/valyala/fasthttp
 github.com/valyala/fasthttp/fasthttpadaptor
