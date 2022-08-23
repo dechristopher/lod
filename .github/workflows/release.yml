@@ -17,7 +17,7 @@ jobs:
         run: echo ${{ github.event.release.tag_name }} > ${{ github.workspace }}/version.txt
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: version
           path: ${{ github.workspace }}/version.txt
@@ -63,7 +63,7 @@ jobs:
           zip -9 -D lod_linux_amd64_${{ env.VERSION }}.zip lod
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: artifact_lod_linux_amd64_${{ env.VERSION }}
           path: cmd/lod/lod_linux_amd64_${{ env.VERSION }}.zip
@@ -119,7 +119,7 @@ jobs:
           zip -9 -D lod_darwin_amd64_${{ env.VERSION }}.zip lod
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: artifact_lod_darwin_amd64_${{ env.VERSION }}
           path: cmd/lod/lod_darwin_amd64_${{ env.VERSION }}.zip
