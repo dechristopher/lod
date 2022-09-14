@@ -23,13 +23,14 @@ import (
 	"time"
 
 	"encoding/json"
+	"encoding/xml"
 
 	"github.com/gofiber/fiber/v2/utils"
 	"github.com/valyala/fasthttp"
 )
 
 // Version of current fiber package
-const Version = "2.36.0"
+const Version = "2.37.1"
 
 // Handler defines a function to serve HTTP requests.
 type Handler = func(*Ctx) error
@@ -63,17 +64,18 @@ type Storage interface {
 
 // ErrorHandler defines a function that will process all errors
 // returned from any handlers in the stack
-//  cfg := fiber.Config{}
-//  cfg.ErrorHandler = func(c *Ctx, err error) error {
-//   code := StatusInternalServerError
-//   var e *fiber.Error
-//   if errors.As(err, &e) {
-//     code = e.Code
-//   }
-//   c.Set(HeaderContentType, MIMETextPlainCharsetUTF8)
-//   return c.Status(code).SendString(err.Error())
-//  }
-//  app := fiber.New(cfg)
+//
+//	cfg := fiber.Config{}
+//	cfg.ErrorHandler = func(c *Ctx, err error) error {
+//	 code := StatusInternalServerError
+//	 var e *fiber.Error
+//	 if errors.As(err, &e) {
+//	   code = e.Code
+//	 }
+//	 c.Set(HeaderContentType, MIMETextPlainCharsetUTF8)
+//	 return c.Status(code).SendString(err.Error())
+//	}
+//	app := fiber.New(cfg)
 type ErrorHandler = func(*Ctx, error) error
 
 // Error represents an error that occurred while handling a request.
@@ -108,10 +110,12 @@ type App struct {
 	// Mounted and main apps
 	appList map[string]*App
 	// Hooks
-	hooks *hooks
+	hooks *Hooks
 	// Latest route & group
 	latestRoute *Route
 	latestGroup *Group
+	// TLS handler
+	tlsHandler *TLSHandler
 }
 
 // Config is a struct holding the server settings.
@@ -323,6 +327,13 @@ type Config struct {
 	// Default: json.Unmarshal
 	JSONDecoder utils.JSONUnmarshal `json:"-"`
 
+	// XMLEncoder set by an external client of Fiber it will use the provided implementation of a
+	// XMLMarshal
+	//
+	// Allowing for flexibility in using another XML library for encoding
+	// Default: xml.Marshal
+	XMLEncoder utils.XMLMarshal `json:"-"`
+
 	// Known networks are "tcp", "tcp4" (IPv4-only), "tcp6" (IPv6-only)
 	// WARNING: When prefork is set to true, only "tcp4" and "tcp6" can be chose.
 	//
@@ -357,6 +368,13 @@ type Config struct {
 	TrustedProxies     []string `json:"trusted_proxies"`
 	trustedProxiesMap  map[string]struct{}
 	trustedProxyRanges []*net.IPNet
+
+	// If set to true, c.IP() and c.IPs() will validate IP addresses before returning them.
+	// Also, c.IP() will return only the first valid IP rather than just the raw header
+	// WARNING: this has a performance cost associated with it.
+	//
+	// Default: false
+	EnableIPValidation bool `json:"enable_ip_validation"`
 
 	// If set to true, will print all routes with their method, path and handler.
 	// Default: false
@@ -438,12 +456,15 @@ var DefaultErrorHandler = func(c *Ctx, err error) error {
 }
 
 // New creates a new Fiber named instance.
-//  app := fiber.New()
+//
+//	app := fiber.New()
+//
 // You can pass optional configuration options by passing a Config struct:
-//  app := fiber.New(fiber.Config{
-//      Prefork: true,
-//      ServerHeader: "Fiber",
-//  })
+//
+//	app := fiber.New(fiber.Config{
+//	    Prefork: true,
+//	    ServerHeader: "Fiber",
+//	})
 func New(config ...Config) *App {
 	// Create a new app
 	app := &App{
@@ -509,6 +530,9 @@ func New(config ...Config) *App {
 	if app.config.JSONDecoder == nil {
 		app.config.JSONDecoder = json.Unmarshal
 	}
+	if app.config.XMLEncoder == nil {
+		app.config.XMLEncoder = xml.Marshal
+	}
 	if app.config.Network == "" {
 		app.config.Network = NetworkTCP4
 	}
@@ -544,6 +568,14 @@ func (app *App) handleTrustedProxy(ipAddress string) {
 	} else {
 		app.config.trustedProxiesMap[ipAddress] = struct{}{}
 	}
+}
+
+// You can use SetTLSHandler to use ClientHelloInfo when using TLS with Listener.
+func (app *App) SetTLSHandler(tlsHandler *TLSHandler) {
+	// Attach the tlsHandler to the config
+	app.mutex.Lock()
+	app.tlsHandler = tlsHandler
+	app.mutex.Unlock()
 }
 
 // Mount attaches another app instance as a sub-router along a routing path.
@@ -609,15 +641,15 @@ func (app *App) GetRoute(name string) Route {
 // Use registers a middleware route that will match requests
 // with the provided prefix (which is optional and defaults to "/").
 //
-//  app.Use(func(c *fiber.Ctx) error {
-//       return c.Next()
-//  })
-//  app.Use("/api", func(c *fiber.Ctx) error {
-//       return c.Next()
-//  })
-//  app.Use("/api", handler, func(c *fiber.Ctx) error {
-//       return c.Next()
-//  })
+//	app.Use(func(c *fiber.Ctx) error {
+//	     return c.Next()
+//	})
+//	app.Use("/api", func(c *fiber.Ctx) error {
+//	     return c.Next()
+//	})
+//	app.Use("/api", handler, func(c *fiber.Ctx) error {
+//	     return c.Next()
+//	})
 //
 // This method will match all HTTP verbs: GET, POST, PUT, HEAD etc...
 func (app *App) Use(args ...interface{}) Router {
@@ -710,8 +742,9 @@ func (app *App) All(path string, handlers ...Handler) Router {
 }
 
 // Group is used for Routes with common prefix to define a new sub-router with optional middleware.
-//  api := app.Group("/api")
-//  api.Get("/users", handler)
+//
+//	api := app.Group("/api")
+//	api.Get("/users", handler)
 func (app *App) Group(prefix string, handlers ...Handler) Router {
 	if len(handlers) > 0 {
 		app.register(methodUse, prefix, handlers...)
@@ -803,7 +836,7 @@ func (app *App) Server() *fasthttp.Server {
 }
 
 // Hooks returns the hook struct to register hooks.
-func (app *App) Hooks() *hooks {
+func (app *App) Hooks() *Hooks {
 	return app.hooks
 }
 
@@ -845,7 +878,15 @@ func (app *App) Test(req *http.Request, msTimeout ...int) (resp *http.Response, 
 	// Serve conn to server
 	channel := make(chan error)
 	go func() {
+		var returned bool
+		defer func() {
+			if !returned {
+				channel <- fmt.Errorf("runtime.Goexit() called in handler or server panic")
+			}
+		}()
+
 		channel <- app.server.ServeConn(conn)
+		returned = true
 	}()
 
 	// Wait for callback
