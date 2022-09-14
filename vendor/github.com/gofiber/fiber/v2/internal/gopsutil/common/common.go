@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"os/exec"
@@ -114,14 +115,20 @@ func ReadLines(filename string) ([]string, error) {
 // ReadLines reads contents from file and splits them by new line.
 // The offset tells at which line number to start.
 // The count determines the number of lines to read (starting from offset):
-//   n >= 0: at most n lines
-//   n < 0: whole file
+//
+//	n >= 0: at most n lines
+//	n < 0: whole file
 func ReadLinesOffsetN(filename string, offset uint, n int) ([]string, error) {
 	f, err := os.Open(filename)
 	if err != nil {
 		return []string{""}, err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}(f)
 
 	var ret []string
 
@@ -203,7 +210,12 @@ func ReadInts(filename string) ([]int64, error) {
 	if err != nil {
 		return []int64{}, err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}(f)
 
 	var ret []int64
 
@@ -308,7 +320,7 @@ func PathExists(filename string) bool {
 	return false
 }
 
-//GetEnv retrieves the environment variable key. If it does not exist it returns the default.
+// GetEnv retrieves the environment variable key. If it does not exist it returns the default.
 func GetEnv(key string, dfault string, combineWith ...string) string {
 	value := os.Getenv(key)
 	if value == "" {

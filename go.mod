@@ -6,13 +6,13 @@ require (
 	github.com/BurntSushi/toml v1.2.0
 	github.com/allegro/bigcache/v3 v3.0.2
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/gofiber/fiber/v2 v2.36.0
+	github.com/gofiber/fiber/v2 v2.37.1
 	github.com/joho/godotenv v1.4.0
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.13.0
 	github.com/prometheus/client_model v0.2.0
 	github.com/twpayne/go-geos v0.4.0
-	github.com/valyala/fasthttp v1.39.0
+	github.com/valyala/fasthttp v1.40.0
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804
 )
 
