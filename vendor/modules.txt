@@ -93,8 +93,8 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/twpayne/go-geos v0.3.0
-## explicit; go 1.17
+# github.com/twpayne/go-geos v0.4.0
+## explicit; go 1.18
 github.com/twpayne/go-geos
 # github.com/valyala/bytebufferpool v1.0.0
 ## explicit

@@ -1,3 +1,5 @@
+//go:generate go run ./internal/cmds/execute-template -data geommethods.yaml -output geommethods.go geommethods.go.tmpl
+
 package geos
 
 // #include "geos.h"
@@ -42,41 +44,6 @@ func (g *Geom) Bounds() *Bounds {
 	return bounds
 }
 
-// Clone returns a clone of g.
-func (g *Geom) Clone() *Geom {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	return g.context.newNonNilGeom(C.GEOSGeom_clone_r(g.context.handle, g.geom), nil)
-}
-
-// ConvexHull returns g's convex hull.
-func (g *Geom) ConvexHull() *Geom {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	return g.context.newNonNilGeom(C.GEOSConvexHull_r(g.context.handle, g.geom), nil)
-}
-
-// Contains returns true if g contains other.
-func (g *Geom) Contains(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSContains_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
 // CoordSeq returns g's coordinate sequence.
 func (g *Geom) CoordSeq() *CoordSeq {
 	g.mustNotBeDestroyed()
@@ -88,82 +55,6 @@ func (g *Geom) CoordSeq() *CoordSeq {
 	coordSeq := g.context.newCoordSeq(s, nil)
 	coordSeq.parent = g
 	return coordSeq
-}
-
-// CoveredBy returns true if g is covered by other.
-func (g *Geom) CoveredBy(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSCoveredBy_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// Covers returns true if g covers other.
-func (g *Geom) Covers(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSCovers_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// Crosses returns true if g crosses other.
-func (g *Geom) Crosses(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSCrosses_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// Disjoint returns true if g is disjoint from other.
-func (g *Geom) Disjoint(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSDisjoint_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
 }
 
 // Distance returns the distance between the closest points on g and other.
@@ -180,33 +71,6 @@ func (g *Geom) Distance(other *Geom) float64 {
 		panic(g.context.err)
 	}
 	return distance
-}
-
-// Envelope returns the envelope of g.
-func (g *Geom) Envelope() *Geom {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	return g.context.newNonNilGeom(C.GEOSEnvelope_r(g.context.handle, g.geom), nil)
-}
-
-// Equals returns true if g equals other.
-func (g *Geom) Equals(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSEquals_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
 }
 
 // EqualsExact returns true if g equals other exactly.
@@ -258,6 +122,23 @@ func (g *Geom) InteriorRing(n int) *Geom {
 	return g.context.newNonNilGeom(C.GEOSGetInteriorRingN_r(g.context.handle, g.geom, C.int(n)), g)
 }
 
+// Buffer buffers a geometry.
+func (g *Geom) Buffer(width float64, quadsegs int) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSBuffer_r(g.context.handle, g.geom, C.double(width), C.int(quadsegs)), g)
+}
+
+// Densify densifies a geometry using a given distance tolerance.
+func (g *Geom) Densify(tolerance float64) *Geom {
+	requireVersion(3, 10, 0)
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSDensify_r(g.context.handle, g.geom, C.double(tolerance)), g)
+}
+
 // Intersection returns the intersection between g and other.
 func (g *Geom) Intersection(other *Geom) *Geom {
 	g.mustNotBeDestroyed()
@@ -268,100 +149,6 @@ func (g *Geom) Intersection(other *Geom) *Geom {
 		defer other.context.Unlock()
 	}
 	return g.context.newNonNilGeom(C.GEOSIntersection_r(g.context.handle, g.geom, other.geom), nil)
-}
-
-// Intersects returns true if g intersects other.
-func (g *Geom) Intersects(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSIntersects_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// IsClosed returns true if g is closed.
-func (g *Geom) IsClosed() bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	switch C.GEOSisClosed_r(g.context.handle, g.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// IsEmpty returns true if g is empty.
-func (g *Geom) IsEmpty() bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	switch C.GEOSisEmpty_r(g.context.handle, g.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// IsRing returns true if g is a ring.
-func (g *Geom) IsRing() bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	switch C.GEOSisRing_r(g.context.handle, g.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// IsSimple returns true if g is simple.
-func (g *Geom) IsSimple() bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	switch C.GEOSisSimple_r(g.context.handle, g.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// IsValid returns true if g is valid.
-func (g *Geom) IsValid() bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	switch C.GEOSisValid_r(g.context.handle, g.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
 }
 
 // IsValidReason returns the reason that g is invalid.
@@ -413,25 +200,6 @@ func (g *Geom) NumPoints() int {
 	return g.numPoints
 }
 
-// Overlaps returns true if g overlaps other.
-func (g *Geom) Overlaps(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSOverlaps_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
 // Point returns the g's nth point.
 func (g *Geom) Point(n int) *Geom {
 	g.mustNotBeDestroyed()
@@ -470,23 +238,18 @@ func (g *Geom) String() string {
 	return g.ToWKT()
 }
 
-// Touches returns true if g touches other.
-func (g *Geom) Touches(other *Geom) bool {
+// ToGeoJSON returns g in GeoJSON format.
+func (g *Geom) ToGeoJSON(indent int) string {
+	requireVersion(3, 10, 0)
 	g.mustNotBeDestroyed()
 	g.context.Lock()
 	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
+	if g.context.geoJSONWriter == nil {
+		g.context.geoJSONWriter = C.GEOSGeoJSONWriter_create_r(g.context.handle)
 	}
-	switch C.GEOSTouches_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
+	geoJSONCStr := C.GEOSGeoJSONWriter_writeGeometry_r(g.context.handle, g.context.geoJSONWriter, g.geom, C.int(indent))
+	defer C.GEOSFree_r(g.context.handle, unsafe.Pointer(geoJSONCStr))
+	return C.GoString(geoJSONCStr)
 }
 
 // ToWKB returns g in WKB format.
@@ -533,49 +296,6 @@ func (g *Geom) Type() string {
 func (g *Geom) TypeID() GeometryTypeID {
 	g.mustNotBeDestroyed()
 	return g.typeID
-}
-
-// Within returns if g is within other.
-func (g *Geom) Within(other *Geom) bool {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	if other.context != g.context {
-		other.context.Lock()
-		defer other.context.Unlock()
-	}
-	switch C.GEOSWithin_r(g.context.handle, g.geom, other.geom) {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		panic(g.context.err)
-	}
-}
-
-// X returns g's X coordinate.
-func (g *Geom) X() float64 {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	var value float64
-	if C.GEOSGeomGetX_r(g.context.handle, g.geom, (*C.double)(&value)) == -1 {
-		panic(g.context.err)
-	}
-	return value
-}
-
-// Y returns g's Y coordinate.
-func (g *Geom) Y() float64 {
-	g.mustNotBeDestroyed()
-	g.context.Lock()
-	defer g.context.Unlock()
-	var value float64
-	if C.GEOSGeomGetY_r(g.context.handle, g.geom, (*C.double)(&value)) == -1 {
-		panic(g.context.err)
-	}
-	return value
 }
 
 func (g *Geom) finalize() {
