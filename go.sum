@@ -225,6 +225,8 @@ github.com/stretchr/testify v1.4.0/go.mod h1:j7eGeouHqKxXV5pUuKE4zz7dFj8WfuZ+81P
 github.com/stretchr/testify v1.7.1 h1:5TQK59W5E3v0r2duFAb7P95B6hEeOyEnHRa8MjYSMTY=
 github.com/twpayne/go-geos v0.3.0 h1:Jar6dmmV6QvdPsoVxxVUqnq2V/qgRK8EYV6s5JoaSEI=
 github.com/twpayne/go-geos v0.3.0/go.mod h1:3pXfxJftBRiMMcYMnuvEVr/8hh5i6xnU1vJICXgZAkI=
+github.com/twpayne/go-geos v0.4.0 h1:NXHN+jRY8WegPWYhOJ9IGhdqQSctmkYnqA0zvds66SU=
+github.com/twpayne/go-geos v0.4.0/go.mod h1:5FbLWuATnKGW+2fVJ43OFf30aJnCuW9jmULXrs1VNnQ=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasthttp v1.37.0 h1:7WHCyI7EAkQMVmrfBhWTCOaeROb1aCBiTopx63LkMbE=

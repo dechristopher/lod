@@ -1,14 +1,21 @@
 linters:
   enable:
+  - asasalint
   - asciicheck
+  - bidichk
   - bodyclose
-  - deadcode
+  - containedctx
+  - contextcheck
+  - decorder
   - depguard
   - dogsled
   - dupl
   - durationcheck
   - errcheck
+  - errchkjson
+  - errname
   - errorlint
+  - execinquery
   - exhaustive
   - exportloopref
   - forbidigo
@@ -18,35 +25,40 @@ linters:
   - godot
   - goerr113
   - gofmt
+  - gofumpt
   - goimports
   - gomodguard
   - goprintffuncname
   - gosec
   - gosimple
   - govet
+  - grouper
   - importas
   - ineffassign
+  - interfacebloat
+  - ireturn
   - misspell
   - nakedret
   - nilerr
   - noctx
+  - nonamedreturns
+  - nosprintfhostport
   - prealloc
-  - rowserrcheck
-  - sqlclosecheck
+  - predeclared
   - staticcheck
-  - structcheck
   - stylecheck
+  - tagliatelle
+  - tenv
   - thelper
   - typecheck
   - unconvert
   - unparam
   - unused
-  - varcheck
-  - wastedassign
   - whitespace
   disable:
   - cyclop
   - exhaustivestruct
+  - exhaustruct
   - funlen
   - gci
   - gochecknoglobals
@@ -54,23 +66,28 @@ linters:
   - gocognit
   - gocyclo
   - godox
-  - gofumpt
   - goheader
   - gomnd
   - gomoddirectives
   - ifshort
   - lll
+  - maintidx
   - makezero
-  - maligned
   - nestif
+  - nlreturn
   - nlreturn
   - nolintlint
   - paralleltest
-  - predeclared
+  - promlinter
   - revive
+  - rowserrcheck # https://github.com/golangci/golangci-lint/issues/2649
   - scopelint
+  - sqlclosecheck # https://github.com/golangci/golangci-lint/issues/2649
+  - structcheck # https://github.com/golangci/golangci-lint/issues/2649
   - testpackage
   - tparallel
+  - varnamelen
+  - wastedassign # https://github.com/golangci/golangci-lint/issues/2649
   - wrapcheck
   - wsl
 
