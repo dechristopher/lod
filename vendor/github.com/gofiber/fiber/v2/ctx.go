@@ -46,6 +46,33 @@ const (
 // userContextKey define the key name for storing context.Context in *fasthttp.RequestCtx
 const userContextKey = "__local_user_context__"
 
+var (
+	// decoderPoolMap helps to improve BodyParser's, QueryParser's and ReqHeaderParser's performance
+	decoderPoolMap = map[string]*sync.Pool{}
+	// tags is used to classify parser's pool
+	tags = []string{queryTag, bodyTag, reqHeaderTag, paramsTag}
+)
+
+func init() {
+	for _, tag := range tags {
+		decoderPoolMap[tag] = &sync.Pool{New: func() interface{} {
+			return decoderBuilder(ParserConfig{
+				IgnoreUnknownKeys: true,
+				ZeroEmpty:         true,
+			})
+		}}
+	}
+}
+
+// SetParserDecoder allow globally change the option of form decoder, update decoderPool
+func SetParserDecoder(parserConfig ParserConfig) {
+	for _, tag := range tags {
+		decoderPoolMap[tag] = &sync.Pool{New: func() interface{} {
+			return decoderBuilder(parserConfig)
+		}}
+	}
+}
+
 // Ctx represents the Context which hold the HTTP request and response.
 // It has methods for the request query string, parameters, body, HTTP headers and so on.
 type Ctx struct {
@@ -154,6 +181,7 @@ func (app *App) ReleaseCtx(c *Ctx) {
 	c.fasthttp = nil
 	if c.viewBindMap != nil {
 		dictpool.ReleaseDict(c.viewBindMap)
+		c.viewBindMap = nil
 	}
 	app.pool.Put(c)
 }
@@ -310,21 +338,6 @@ func (c *Ctx) Body() []byte {
 	return body
 }
 
-// decoderPool helps to improve BodyParser's, QueryParser's and ReqHeaderParser's performance
-var decoderPool = &sync.Pool{New: func() interface{} {
-	return decoderBuilder(ParserConfig{
-		IgnoreUnknownKeys: true,
-		ZeroEmpty:         true,
-	})
-}}
-
-// SetParserDecoder allow globally change the option of form decoder, update decoderPool
-func SetParserDecoder(parserConfig ParserConfig) {
-	decoderPool = &sync.Pool{New: func() interface{} {
-		return decoderBuilder(parserConfig)
-	}}
-}
-
 func decoderBuilder(parserConfig ParserConfig) interface{} {
 	decoder := schema.NewDecoder()
 	decoder.IgnoreUnknownKeys(parserConfig.IgnoreUnknownKeys)
@@ -464,7 +477,7 @@ func (c *Ctx) Cookie(cookie *Cookie) {
 	fasthttp.ReleaseCookie(fcookie)
 }
 
-// Cookies is used for getting a cookie value by key.
+// Cookies are used for getting a cookie value by key.
 // Defaults to the empty string "" if the cookie doesn't exist.
 // If a default value is given, it will return that value if the cookie doesn't exist.
 // The returned value is only valid within the handler. Do not store any references.
@@ -933,7 +946,7 @@ func (c *Ctx) Params(key string, defaultValue ...string) string {
 	return defaultString("", defaultValue)
 }
 
-// Params is used to get all route parameters.
+// AllParams Params is used to get all route parameters.
 // Using Params method to get params.
 func (c *Ctx) AllParams() map[string]string {
 	params := make(map[string]string, len(c.route.Params))
@@ -1108,8 +1121,8 @@ func (c *Ctx) ReqHeaderParser(out interface{}) error {
 
 func (c *Ctx) parseToStruct(aliasTag string, out interface{}, data map[string][]string) error {
 	// Get decoder from pool
-	schemaDecoder := decoderPool.Get().(*schema.Decoder)
-	defer decoderPool.Put(schemaDecoder)
+	schemaDecoder := decoderPoolMap[aliasTag].Get().(*schema.Decoder)
+	defer decoderPoolMap[aliasTag].Put(schemaDecoder)
 
 	// Set alias tag
 	schemaDecoder.SetAliasTag(aliasTag)
@@ -1225,7 +1238,7 @@ func (c *Ctx) Redirect(location string, status ...int) error {
 	return nil
 }
 
-// Add vars to default view var map binding to template engine.
+// Bind Add vars to default view var map binding to template engine.
 // Variables are read by the Render method and may be overwritten.
 func (c *Ctx) Bind(vars Map) error {
 	// init viewBindMap - lazy map
@@ -1253,7 +1266,7 @@ func (c *Ctx) getLocationFromRoute(route Route, params Map) (string, error) {
 
 		for key, val := range params {
 			isSame := key == segment.ParamName || (!c.app.config.CaseSensitive && utils.EqualFold(key, segment.ParamName))
-			isGreedy := (segment.IsGreedy && len(key) == 1 && isInCharset(key[0], greedyParameters))
+			isGreedy := segment.IsGreedy && len(key) == 1 && isInCharset(key[0], greedyParameters)
 			if isSame || isGreedy {
 				_, err := buf.WriteString(utils.ToString(val))
 				if err != nil {
@@ -1545,7 +1558,6 @@ func (c *Ctx) SendStream(stream io.Reader, size ...int) error {
 		c.fasthttp.Response.SetBodyStream(stream, size[0])
 	} else {
 		c.fasthttp.Response.SetBodyStream(stream, -1)
-		c.setCanonical(HeaderContentLength, strconv.Itoa(len(c.fasthttp.Response.Body())))
 	}
 
 	return nil
