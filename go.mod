@@ -9,7 +9,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.39.0
 	github.com/joho/godotenv v1.4.0
 	github.com/pkg/errors v0.9.1
-	github.com/prometheus/client_golang v1.13.1
+	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
 	github.com/twpayne/go-geos v0.5.0
 	github.com/valyala/fasthttp v1.41.0
