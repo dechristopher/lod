@@ -1,7 +1,7 @@
 <!--suppress HtmlDeprecatedAttribute -->
 
 <h1 align="center"><a href="https://lod.tile.fund">LOD</a>: Levels of Detail</h1>
-<p align="center">An intelligent map tile proxy cache for the edge.</p>
+<p align="center">An intelligent map tile caching proxy for the edge.</p>
 
 <p align="center">
   <a href="https://github.com/dechristopher/lod/releases/latest" style="text-decoration: none">
