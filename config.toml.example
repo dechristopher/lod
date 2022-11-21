@@ -22,8 +22,10 @@ name = "osm_id"
 default = "0"
 
 [proxies.cache]
+mem_enabled = true
 mem_cap = 200
 mem_ttl = "2h"
+redis_enabled = true
 redis_ttl = "48h"
 redis_url = "redis://localhost:6379/0"
 # dynamic endpoint name in cache key (replaces {e})
@@ -36,8 +38,10 @@ cors_origins = "*"
 del_headers = ["Tegola-Cache"]
 
 [proxies.cache]
+mem_enabled = true
 mem_cap = 200
 mem_ttl = "1h"
+redis_enabled = true
 redis_ttl = "48h"
 redis_url = "redis://localhost:6379/0"
 key_template = "tornadoes:{z}:{x}:{y}"

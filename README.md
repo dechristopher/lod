@@ -43,7 +43,7 @@ Redis cluster for faster fetching later. LOD is cluster-aware and uses Redis
 message queueing for intra-cluster communication when multiple instances are
 deployed together.
 
-LOD is written in Go 1.18.1 using [fiber](https://github.com/gofiber/fiber). TOML
+LOD is written in Go 1.19 using [fiber](https://github.com/gofiber/fiber). TOML
 is used for configuration. Go templates are used for templating. Internal
 in-memory caching is built upon the [bigcache](https://github.com/allegro/bigcache)
 library by [allegro](https://github.com/allegro).
@@ -159,6 +159,8 @@ del_headers = ["X-Get-Rid-Of-Me"]
 
 # proxy cache configuration
 [proxies.cache]
+# enable in-memory cache
+mem_enabled = true
 # maximum capacity in MB of the in-memory cache
 mem_cap = 100
 # Cache TTLs are set using Go's built-in time.ParseDuration
@@ -166,6 +168,8 @@ mem_cap = 100
 # For example: 1h, 5m, 300s, 1000ms, 2h35m, etc.
 # in-memory cache TTL
 mem_ttl = "1h"
+# enable redis cache
+redis_enabled = true
 # redis tile cache TTL, or "0" for no expiry
 redis_ttl = "24h"
 # redis connection URL

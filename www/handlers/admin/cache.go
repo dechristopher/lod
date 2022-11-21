@@ -182,10 +182,13 @@ func tileWorker(payload tileWorkerPayload) {
 			CacheKey:  cacheKey,
 			Response:  proxyResp,
 			WriteData: true,
-		}); err == nil {
-			// signal successful tile
-			payload.successes <- true
+		}); err != nil {
+			util.DebugFlag("primer", str.CAdmin, str.DPrimeFail, tileJob.String(), err.Error())
+			return
 		}
+
+		// signal successful tile
+		payload.successes <- true
 	}
 }
 

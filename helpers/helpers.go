@@ -199,6 +199,8 @@ type ProcessResponsePayload struct {
 func ProcessResponse(payload ProcessResponsePayload) error {
 	// make sure a common 2XX response is received with relevant data, otherwise
 	// we complain and throw a 500 due to misconfiguration of the proxy
+
+	// TODO reason about this condition. Can tile servers return nothing for a tile that truly has no data?
 	if payload.Response.Code == fiber.StatusNoContent || (len(payload.Response.Body) > 0 && payload.Response.Code == fiber.StatusOK) {
 		// copy tile data into separate slice, so we don't lose the reference
 		tileData := make([]byte, len(payload.Response.Body))
