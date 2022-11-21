@@ -30,10 +30,6 @@
   <a href="https://goreportcard.com/report/github.com/dechristopher/lod" style="text-decoration: none">
     <img src="https://img.shields.io/badge/go%20report-A+-success.svg?style=flat-square" alt="Go Report Card">
   </a>
-  <br/>
-  <a href="https://codecov.io/gh/dechristopher/lod">
-    <img src="https://img.shields.io/codecov/c/gh/dechristopher/lod?color=magenta&logo=codecov&style=flat-square" alt="Coverage"/>
-  </a>
 </p>
 
 LOD (Levels of Detail) is a thin map tile proxy with in-memory caching and a
