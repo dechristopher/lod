@@ -116,9 +116,9 @@ $ docker run -v /path/to/lod-config:/opt/lod_config -p 1337:1337 lod --conf /opt
   - [X] Security via Bearer Token Authorization
   - [X] Reload the instance configuration
   - [X] Flush the instance caches
-  - [ ] Invalidate a given tile and re-prime it
+  - [X] Invalidate a given tile and re-prime it
   - [X] Iteratively invalidate all tiles under a given tile (all zoom levels)
-  - [ ] Iteratively prime all tiles under a given tile
+  - [X] Iteratively prime all tiles under a given tile
   - [ ] Cluster-wide operations
     - [ ] Flush the instance caches across all instances
     - [ ] Invalidate a given tile and re-prime it across the cluster

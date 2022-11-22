@@ -8,7 +8,7 @@ import (
 	"github.com/dechristopher/lod/util"
 )
 
-type status struct {
+type statusResponse struct {
 	Version     string  `json:"v"`      // current lio version
 	Environment env.Env `json:"env"`    // configured environment
 	Uptime      float64 `json:"uptime"` // uptime in seconds
@@ -17,7 +17,7 @@ type status struct {
 
 // Status returns a JSON object with status info
 func Status(c *fiber.Ctx) error {
-	return c.JSON(status{
+	return c.JSON(statusResponse{
 		Version:     config.Version,
 		Environment: env.GetEnv(),
 		Uptime:      util.TimeSinceBoot().Seconds(),
