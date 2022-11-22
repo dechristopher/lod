@@ -1,0 +1,5 @@
+linters-settings:
+  gosimple:
+    checks:
+      - all
+      - '-S1001' # disable the rule S1001, packet/encode.go:57:2: S1001: should use copy() instead of a loop
