@@ -68,7 +68,7 @@ Or just use our Docker image!
 You can create your own Dockerfile that adds a `config.toml` from the context
 into the config directory, like so:
 ```Dockerfile
-FROM dechristopher/lod:0.8.0
+FROM dechristopher/lod:0.9.0
 COPY /path/to/your_config.toml /opt/lod_cfg/config.toml
 CMD [ "/opt/lod", "--conf", "/opt/lod_cfg/config.toml" ]
 ```
@@ -187,12 +187,24 @@ name = "another"
 # etc.
 ```
 
+## Additional Configuration
+
+**WARNING**: these are experimental configuration properties. Only change them if you know what you're doing. All are
+exposed as environment variables.
+
+```
+MAX_ENTRY_SIZE: int
+  Size in MB of the "entry" that bigcache sizes its internal cache buckets by. Should be about the size of your 90th
+  percentile tiles.
+```
+
 ## License
 
 LOD is licensed under the GNU Affero General Public License 3 or any later
 version at your choice. See COPYING for details.
 
 ## More Tile Resources
+
 - https://wiki.openstreetmap.org/wiki/Category:Tiles_and_tiling
 - https://wiki.openstreetmap.org/wiki/Tile_servers
 - https://github.com/mapbox/awesome-vector-tiles

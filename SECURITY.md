@@ -7,7 +7,7 @@ checks that could impact a user's system or infrastructure, please let us know.
 ## Supported Versions
 
 | Version | Supported          |
-| ------- | ------------------ |
+|---------|--------------------|
 | <1.0.0  | :white_check_mark: |
 
 ## Reporting a Vulnerability
