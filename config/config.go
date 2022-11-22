@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"regexp"
@@ -131,7 +131,7 @@ func Load() error {
 		configData, err = readHttp()
 	} else {
 		// read config file from disk if provided as a local path
-		configData, err = ioutil.ReadFile(*File)
+		configData, err = os.ReadFile(*File)
 	}
 
 	if err != nil {
@@ -185,7 +185,7 @@ func readHttp() ([]byte, error) {
 	}
 
 	// read all bytes from response body into configData
-	configData, err := ioutil.ReadAll(resp.Body)
+	configData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, ErrConfigGetHTTP{
 			URL: *File,

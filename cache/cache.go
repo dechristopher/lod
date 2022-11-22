@@ -164,7 +164,7 @@ func initInternal(proxy config.Proxy) (*bigcache.BigCache, error) {
 	conf.MaxEntrySize = OneMB * maxEntrySize
 	conf.HardMaxCacheSize = proxy.Cache.MemCap
 
-	return bigcache.NewBigCache(conf)
+	return bigcache.New(context.TODO(), conf)
 }
 
 // initExternal initializes an external cache instance from proxy configuration
