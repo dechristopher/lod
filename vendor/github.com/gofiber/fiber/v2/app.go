@@ -27,7 +27,7 @@ import (
 )
 
 // Version of current fiber package
-const Version = "2.40.0"
+const Version = "2.40.1"
 
 // Handler defines a function to serve HTTP requests.
 type Handler = func(*Ctx) error
@@ -385,7 +385,7 @@ type Config struct {
 
 	// RequestMethods provides customizibility for HTTP methods. You can add/remove methods as you wish.
 	//
-	// Optional. Defaukt: DefaultMethods
+	// Optional. Default: DefaultMethods
 	RequestMethods []string
 }
 
