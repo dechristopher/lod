@@ -57,7 +57,7 @@ COPY . /go/src/github.com/dechristopher/lod
 
 # Build binary
 RUN cd /go/src/github.com/dechristopher/lod/cmd/lod \
- 	&& go build -v -ldflags "-w -X 'github.com/dechristopher/lod/config.Version=${VERSION}'" -gcflags "-N -l" -o /opt/lod \
+	&& go build -v -ldflags "-w -X 'github.com/dechristopher/lod/config.Version=${VERSION}'" -gcflags "-N -l" -o /opt/lod \
 	&& chmod a+x /opt/lod
 
 # ---- Run Stage ----
