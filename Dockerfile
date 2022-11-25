@@ -22,11 +22,11 @@
 #
 
 # ---- Build Stage ----
-FROM golang:1.19.3-alpine3.15 as builder
+FROM golang:1.19.3-alpine3.16 as builder
 
 LABEL maintainer="Andrew DeChristopher"
 
-ARG VERSION="Version Not Set"
+ARG VERSION="DEVELOPMENT"
 ENV VERSION="${VERSION}"
 
 WORKDIR /build
@@ -70,6 +70,8 @@ RUN apk update \
 	&& apk add geos \
 	&& apk add geos-dev \
 	&& rm -rf /var/cache/apk/*
+
+RUN mkdir /opt/lod_config
 
 # Import the user and group files from the builder
 COPY --from=builder /etc/passwd /etc/passwd
