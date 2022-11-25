@@ -34,8 +34,8 @@ WORKDIR /build
 # We need libgeos to suport geospatial operations when running tile intersections
 # for some of the administrative endpoint functions
 RUN apk update \
-	&& apk add musl-dev=1.2.2-r7 \
-	&& apk add gcc=10.3.1_git20211027-r0 \
+	&& apk add musl-dev \
+	&& apk add gcc \
 	&& apk add geos \
 	&& apk add geos-dev
 
