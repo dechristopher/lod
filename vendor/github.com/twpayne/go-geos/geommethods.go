@@ -17,12 +17,34 @@ func (g *Geom) Area() float64 {
 	return area
 }
 
+func (g *Geom) Buffer(width float64, quadsegs int) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSBuffer_r(g.context.handle, g.geom, C.double(width), C.int(quadsegs)), nil)
+}
+
+// BufferWithStyle returns a buffer using the provided style parameters.
+func (g *Geom) BufferWithStyle(width float64, quadsegs int, endCapStyle BufCapStyle, joinStyle BufJoinStyle, mitreLimit float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSBufferWithStyle_r(g.context.handle, g.geom, C.double(width), C.int(quadsegs), C.int(endCapStyle), C.int(joinStyle), C.double(mitreLimit)), nil)
+}
+
 // Clone returns a clone of g.
 func (g *Geom) Clone() *Geom {
 	g.mustNotBeDestroyed()
 	g.context.Lock()
 	defer g.context.Unlock()
 	return g.context.newNonNilGeom(C.GEOSGeom_clone_r(g.context.handle, g.geom), nil)
+}
+
+func (g *Geom) ConcaveHull(ratio float64, allowHoles uint) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSConcaveHull_r(g.context.handle, g.geom, C.double(ratio), C.unsigned(allowHoles)), nil)
 }
 
 // ConvexHull returns g's convex hull.
@@ -107,6 +129,13 @@ func (g *Geom) Crosses(other *Geom) bool {
 	default:
 		panic(g.context.err)
 	}
+}
+
+func (g *Geom) Densify(tolerance float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSDensify_r(g.context.handle, g.geom, C.double(tolerance)), nil)
 }
 
 // Difference returns the difference between g and other.
@@ -313,6 +342,44 @@ func (g *Geom) HausdorffDistanceDensify(other *Geom, densifyFrac float64) float6
 	return hausdorffDistanceDensify
 }
 
+// Interpolate returns a point distance d from the start of g, which must be a linestring.
+func (g *Geom) Interpolate(d float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newGeom(C.GEOSInterpolate_r(g.context.handle, g.geom, C.double(d)), nil)
+}
+
+// InterpolateNormalized returns the point that is at proportion from the start.
+func (g *Geom) InterpolateNormalized(proportion float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newGeom(C.GEOSInterpolateNormalized_r(g.context.handle, g.geom, C.double(proportion)), nil)
+}
+
+func (g *Geom) Intersection(other *Geom) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	return g.context.newGeom(C.GEOSIntersection_r(g.context.handle, g.geom, other.geom), nil)
+}
+
+func (g *Geom) IntersectionPrec(other *Geom, gridSize float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	return g.context.newGeom(C.GEOSIntersectionPrec_r(g.context.handle, g.geom, other.geom, C.double(gridSize)), nil)
+}
+
 // Intersects returns true if g intersects other.
 func (g *Geom) Intersects(other *Geom) bool {
 	g.mustNotBeDestroyed()
@@ -419,12 +486,33 @@ func (g *Geom) Length() float64 {
 	return length
 }
 
+func (g *Geom) MaximumInscribedCircle(tolerance float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSMaximumInscribedCircle_r(g.context.handle, g.geom, C.double(tolerance)), nil)
+}
+
+func (g *Geom) MinimumRotatedRectangle() *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSMinimumRotatedRectangle_r(g.context.handle, g.geom), nil)
+}
+
 // MinimumWidth returns a linestring geometry which represents the minimum diameter of g.
 func (g *Geom) MinimumWidth() *Geom {
 	g.mustNotBeDestroyed()
 	g.context.Lock()
 	defer g.context.Unlock()
 	return g.context.newNonNilGeom(C.GEOSMinimumWidth_r(g.context.handle, g.geom), nil)
+}
+
+func (g *Geom) OffsetCurve(width float64, quadsegs int, joinStyle BufJoinStyle, mitreLimit float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSOffsetCurve_r(g.context.handle, g.geom, C.double(width), C.int(quadsegs), C.int(joinStyle), C.double(mitreLimit)), nil)
 }
 
 // Overlaps returns true if g overlaps other.
@@ -444,6 +532,17 @@ func (g *Geom) Overlaps(other *Geom) bool {
 	default:
 		panic(g.context.err)
 	}
+}
+
+func (g *Geom) SymDifference(other *Geom) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	return g.context.newGeom(C.GEOSSymDifference_r(g.context.handle, g.geom, other.geom), nil)
 }
 
 // Touches returns true if g touches other.

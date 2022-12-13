@@ -12,19 +12,37 @@ const (
 	VersionPatch = C.GEOS_VERSION_PATCH
 )
 
-// A GeometryTypeID is a geometry type id.
-type GeometryTypeID int
+// A TypeID is a geometry type id.
+type TypeID int
 
 // Geometry type ids.
 const (
-	PointTypeID              GeometryTypeID = C.GEOS_POINT
-	LineStringTypeID         GeometryTypeID = C.GEOS_LINESTRING
-	LinearRingTypeID         GeometryTypeID = C.GEOS_LINEARRING
-	PolygonTypeID            GeometryTypeID = C.GEOS_POLYGON
-	MultiPointTypeID         GeometryTypeID = C.GEOS_MULTIPOINT
-	MultiLineStringTypeID    GeometryTypeID = C.GEOS_MULTILINESTRING
-	MultiPolygonTypeID       GeometryTypeID = C.GEOS_MULTIPOLYGON
-	GeometryCollectionTypeID GeometryTypeID = C.GEOS_GEOMETRYCOLLECTION
+	TypeIDPoint              TypeID = C.GEOS_POINT
+	TypeIDLineString         TypeID = C.GEOS_LINESTRING
+	TypeIDLinearRing         TypeID = C.GEOS_LINEARRING
+	TypeIDPolygon            TypeID = C.GEOS_POLYGON
+	TypeIDMultiPoint         TypeID = C.GEOS_MULTIPOINT
+	TypeIDMultiLineString    TypeID = C.GEOS_MULTILINESTRING
+	TypeIDMultiPolygon       TypeID = C.GEOS_MULTIPOLYGON
+	TypeIDGeometryCollection TypeID = C.GEOS_GEOMETRYCOLLECTION
+)
+
+type BufCapStyle int
+
+// Buffer cap styles.
+const (
+	BufCapStyleRound  BufCapStyle = C.GEOSBUF_CAP_ROUND
+	BufCapStyleFlat   BufCapStyle = C.GEOSBUF_CAP_FLAT
+	BufCapStyleSquare BufCapStyle = C.GEOSBUF_CAP_SQUARE
+)
+
+type BufJoinStyle int
+
+// Buffer join styles.
+const (
+	BufJoinStyleRound BufJoinStyle = C.GEOSBUF_JOIN_ROUND
+	BufJoinStyleMitre BufJoinStyle = C.GEOSBUF_JOIN_MITRE
+	BufJoinStyleBevel BufJoinStyle = C.GEOSBUF_JOIN_BEVEL
 )
 
 // An Error is an error returned by GEOS.
