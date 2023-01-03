@@ -28,7 +28,7 @@ github.com/go-redis/redis/v8/internal/pool
 github.com/go-redis/redis/v8/internal/proto
 github.com/go-redis/redis/v8/internal/rand
 github.com/go-redis/redis/v8/internal/util
-# github.com/gofiber/fiber/v2 v2.40.1
+# github.com/gofiber/fiber/v2 v2.41.0
 ## explicit; go 1.19
 github.com/gofiber/fiber/v2
 github.com/gofiber/fiber/v2/internal/dictpool
@@ -67,7 +67,7 @@ github.com/klauspost/compress/zlib
 # github.com/mattn/go-colorable v0.1.13
 ## explicit; go 1.15
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.16
+# github.com/mattn/go-isatty v0.0.17
 ## explicit; go 1.15
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.14
