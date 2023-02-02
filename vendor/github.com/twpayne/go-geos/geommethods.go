@@ -486,6 +486,14 @@ func (g *Geom) Length() float64 {
 	return length
 }
 
+// MakeValid repair an invalid geometry, returning a valid output.
+func (g *Geom) MakeValid() *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSMakeValid_r(g.context.handle, g.geom), nil)
+}
+
 func (g *Geom) MaximumInscribedCircle(tolerance float64) *Geom {
 	g.mustNotBeDestroyed()
 	g.context.Lock()
@@ -534,6 +542,21 @@ func (g *Geom) Overlaps(other *Geom) bool {
 	}
 }
 
+func (g *Geom) SetPrecision(gridSize float64, flags PrecisionRule) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSGeom_setPrecision_r(g.context.handle, g.geom, C.double(gridSize), C.int(flags)), nil)
+}
+
+// Simplify returns a simplified geometry.
+func (g *Geom) Simplify(tolerance float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSSimplify_r(g.context.handle, g.geom, C.double(tolerance)), nil)
+}
+
 func (g *Geom) SymDifference(other *Geom) *Geom {
 	g.mustNotBeDestroyed()
 	g.context.Lock()
@@ -543,6 +566,14 @@ func (g *Geom) SymDifference(other *Geom) *Geom {
 		defer other.context.Unlock()
 	}
 	return g.context.newGeom(C.GEOSSymDifference_r(g.context.handle, g.geom, other.geom), nil)
+}
+
+// TopologyPreserveSimplify returns a simplified geometry preserving topology.
+func (g *Geom) TopologyPreserveSimplify(tolerance float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSTopologyPreserveSimplify_r(g.context.handle, g.geom, C.double(tolerance)), nil)
 }
 
 // Touches returns true if g touches other.

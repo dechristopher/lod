@@ -46,7 +46,7 @@ func NewContext(options ...ContextOption) *Context {
 	// Error: dupSubExpr: suspicious identical LHS and RHS for `==` operator (gocritic)
 	// As the line does not contain an `==` operator, disable gocritic on this line.
 	//nolint:gocritic
-	C.GEOSContext_setErrorMessageHandler_r(c.handle, (C.GEOSMessageHandler_r)(C.c_errorMessageHandler), unsafe.Pointer(&c.err))
+	C.GEOSContext_setErrorMessageHandler_r(c.handle, C.GEOSMessageHandler_r(C.c_errorMessageHandler), unsafe.Pointer(&c.err))
 	for _, option := range options {
 		option(c)
 	}
@@ -131,7 +131,7 @@ func (c *Context) NewEmptyPolygon() *Geom {
 // NewGeomFromBounds returns a new polygon constructed from bounds.
 func (c *Context) NewGeomFromBounds(bounds *Bounds) *Geom {
 	var typeID C.int
-	geom := C.c_newGEOSGeomFromBounds_r(c.handle, &typeID, (C.double)(bounds.MinX), (C.double)(bounds.MinY), (C.double)(bounds.MaxX), (C.double)(bounds.MaxY))
+	geom := C.c_newGEOSGeomFromBounds_r(c.handle, &typeID, C.double(bounds.MinX), C.double(bounds.MinY), C.double(bounds.MaxX), C.double(bounds.MaxY))
 	if geom == nil {
 		panic(c.err)
 	}
@@ -257,6 +257,49 @@ func (c *Context) NewPolygon(coordss [][][]float64) *Geom {
 	return c.newNonNilGeom(C.GEOSGeom_createPolygon_r(c.handle, shell, holes, C.uint(nholes)), nil)
 }
 
+// Polygonize returns a set of geometries which contains linework that
+// represents the edges of a planar graph.
+func (c *Context) Polygonize(geoms []*Geom) *Geom {
+	c.Lock()
+	defer c.Unlock()
+	cGeoms, extraContexts := c.cGeoms(geoms)
+	for i := len(extraContexts) - 1; i > 0; i-- {
+		defer extraContexts[i].Unlock()
+	}
+	return c.newNonNilGeom(C.GEOSPolygonize_r(c.handle, cGeoms, C.uint(len(geoms))), nil)
+}
+
+// PolygonizeValid returns a set of polygons which contains linework that
+// represents the edges of a planar graph.
+func (c *Context) PolygonizeValid(geoms []*Geom) *Geom {
+	c.Lock()
+	defer c.Unlock()
+	cGeoms, extraContexts := c.cGeoms(geoms)
+	for i := len(extraContexts) - 1; i > 0; i-- {
+		defer extraContexts[i].Unlock()
+	}
+	return c.newNonNilGeom(C.GEOSPolygonize_valid_r(c.handle, cGeoms, C.uint(len(geoms))), nil)
+}
+
+func (c *Context) cGeoms(geoms []*Geom) (**C.struct_GEOSGeom_t, []*Context) {
+	if len(geoms) == 0 {
+		return nil, nil
+	}
+	uniqueContexts := map[*Context]struct{}{c: {}}
+	var extraContexts []*Context
+	cGeoms := make([]*C.struct_GEOSGeom_t, 0, len(geoms))
+	for _, geom := range geoms {
+		geom.mustNotBeDestroyed()
+		if _, ok := uniqueContexts[geom.context]; !ok {
+			geom.context.Lock()
+			uniqueContexts[geom.context] = struct{}{}
+			extraContexts = append(extraContexts, geom.context)
+		}
+		cGeoms = append(cGeoms, geom.geom)
+	}
+	return &cGeoms[0], extraContexts
+}
+
 func (c *Context) finish() {
 	c.Lock()
 	defer c.Unlock()
@@ -378,7 +421,6 @@ func (c *Context) newNonNilGeom(geom *C.struct_GEOSGeom_t, parent *Geom) *Geom {
 	return c.newGeom(geom, parent)
 }
 
-//nolint:godot
 //export go_errorMessageHandler
 func go_errorMessageHandler(message *C.char, userdata unsafe.Pointer) {
 	errP := (*error)(userdata)
