@@ -22,7 +22,7 @@
 #
 
 # ---- Build Stage ----
-FROM golang:1.20.0-alpine3.16 as builder
+FROM golang:1.20.1-alpine3.16 as builder
 
 LABEL maintainer="Andrew DeChristopher"
 
