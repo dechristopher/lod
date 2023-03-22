@@ -1,8 +1,8 @@
 // Package geos provides an interface to GEOS. See https://trac.osgeo.org/geos/.
 package geos
 
-// #cgo LDFLAGS: -lgeos_c
-// #include "geos.h"
+// #cgo pkg-config: geos
+// #include "go-geos.h"
 import "C"
 
 // Version.
@@ -25,6 +25,18 @@ const (
 	TypeIDMultiLineString    TypeID = C.GEOS_MULTILINESTRING
 	TypeIDMultiPolygon       TypeID = C.GEOS_MULTIPOLYGON
 	TypeIDGeometryCollection TypeID = C.GEOS_GEOMETRYCOLLECTION
+)
+
+// A BoundaryNodeRule is a boundary node rule.
+type RelateBoundaryNodeRule int
+
+// Boundary node rules.
+const (
+	RelateBoundaryNodeRuleMod2                RelateBoundaryNodeRule = C.GEOSRELATE_BNR_MOD2
+	RelateBoundaryNodeRuleOGC                 RelateBoundaryNodeRule = C.GEOSRELATE_BNR_OGC
+	RelateBoundaryNodeRuleEndpoint            RelateBoundaryNodeRule = C.GEOSRELATE_BNR_ENDPOINT
+	RelateBoundaryNodeRuleMultivalentEndpoint RelateBoundaryNodeRule = C.GEOSRELATE_BNR_MULTIVALENT_ENDPOINT
+	RelateBoundaryNodeRuleMonovalentEndpoint  RelateBoundaryNodeRule = C.GEOSRELATE_BNR_MONOVALENT_ENDPOINT
 )
 
 type BufCapStyle int
@@ -53,7 +65,9 @@ func (e Error) Error() string {
 }
 
 var (
+	errContextMismatch     = Error("context mismatch")
 	errDimensionOutOfRange = Error("dimension out of range")
+	errDuplicateValue      = Error("duplicate value")
 	errIndexOutOfRange     = Error("index out of range")
 )
 
@@ -61,25 +75,9 @@ type PrecisionRule int
 
 // Precision rules.
 const (
+	PrecisionRuleNone          PrecisionRule = 0
 	PrecisionRuleValidOutput   PrecisionRule = C.GEOS_PREC_VALID_OUTPUT
+	PrecisionRuleNoTopo        PrecisionRule = C.GEOS_PREC_NO_TOPO
 	PrecisionRulePointwise     PrecisionRule = C.GEOS_PREC_NO_TOPO
 	PrecisionRuleKeepCollapsed PrecisionRule = C.GEOS_PREC_KEEP_COLLAPSED
 )
-
-// versionEqualOrGreaterThan returns true if the GEOS version is at least
-// major.minor.patch.
-func versionEqualOrGreaterThan(major, minor, patch int) bool {
-	switch {
-	case VersionMajor > major:
-		return true
-	case VersionMajor < major:
-		return false
-	}
-	switch {
-	case VersionMinor > minor:
-		return true
-	case VersionMinor < minor:
-		return false
-	}
-	return VersionPatch >= patch
-}

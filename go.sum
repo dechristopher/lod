@@ -297,6 +297,8 @@ github.com/twpayne/go-geos v0.9.0 h1:Dcgmnqyj6EeaGlq6WH3yZ2uKGQ3e/VxdnxBhWu5mXe0
 github.com/twpayne/go-geos v0.9.0/go.mod h1:ghmhzeDJuLrFJFvOXUbn+sjPukdKYh11fxaGVq3e7Hk=
 github.com/twpayne/go-geos v0.9.1 h1:79+HdNeArdzFhqJgV+v2+1Y/XnlPvq2oRjj8VhNaiJI=
 github.com/twpayne/go-geos v0.9.1/go.mod h1:ghmhzeDJuLrFJFvOXUbn+sjPukdKYh11fxaGVq3e7Hk=
+github.com/twpayne/go-geos v0.13.1 h1:z9eL6XbkJc/BZhxrKPOeDZN2I/2NXjXWaJ1UA7fDjhc=
+github.com/twpayne/go-geos v0.13.1/go.mod h1:DdtpdCqA2PDHXN54xgvScmp7p8D0XwS/tvDJsyfBSfU=
 github.com/valyala/bytebufferpool v1.0.0 h1:GqA5TC/0021Y/b9FG4Oi9Mr3q7XYx6KllzawFIhcdPw=
 github.com/valyala/bytebufferpool v1.0.0/go.mod h1:6bBcMArwyJ5K/AmCkWv1jt77kVWyCJ6HpOuEn7z0Csc=
 github.com/valyala/fasthttp v1.37.0 h1:7WHCyI7EAkQMVmrfBhWTCOaeROb1aCBiTopx63LkMbE=
