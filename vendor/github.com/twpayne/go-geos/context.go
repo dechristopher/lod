@@ -1,7 +1,7 @@
 package geos
 
 // #include <stdlib.h>
-// #include "geos.h"
+// #include "go-geos.h"
 import "C"
 
 import (
@@ -13,15 +13,16 @@ import (
 // A Context is a context.
 type Context struct {
 	sync.Mutex
-	handle           C.GEOSContextHandle_t
-	geoJSONReader    *C.struct_GEOSGeoJSONReader_t
-	geoJSONWriter    *C.struct_GEOSGeoJSONWriter_t
-	wkbReader        *C.struct_GEOSWKBReader_t
-	wkbWriter        *C.struct_GEOSWKBWriter_t
-	wktReader        *C.struct_GEOSWKTReader_t
-	wktWriter        *C.struct_GEOSWKTWriter_t
-	err              error
-	geomFinalizeFunc func(*Geom)
+	handle              C.GEOSContextHandle_t
+	geoJSONReader       *C.struct_GEOSGeoJSONReader_t
+	geoJSONWriter       *C.struct_GEOSGeoJSONWriter_t
+	wkbReader           *C.struct_GEOSWKBReader_t
+	wkbWriter           *C.struct_GEOSWKBWriter_t
+	wktReader           *C.struct_GEOSWKTReader_t
+	wktWriter           *C.struct_GEOSWKTWriter_t
+	err                 error
+	geomFinalizeFunc    func(*Geom)
+	strTreeFinalizeFunc func(*STRtree)
 }
 
 // A ContextOption sets an option on a Context.
@@ -33,6 +34,15 @@ type ContextOption func(*Context)
 func WithGeomFinalizeFunc(geomFinalizeFunc func(*Geom)) ContextOption {
 	return func(c *Context) {
 		c.geomFinalizeFunc = geomFinalizeFunc
+	}
+}
+
+// WithSTRtreeFinalizeFunc sets a function to be called just before an STRtree
+// is finalized. This is typically used to log the STRtree to help debug STRtree
+// leaks.
+func WithSTRtreeFinalizeFunc(strTreeFinalizeFunc func(*STRtree)) ContextOption {
+	return func(c *Context) {
+		c.strTreeFinalizeFunc = strTreeFinalizeFunc
 	}
 }
 
@@ -206,6 +216,11 @@ func (c *Context) NewPoint(coord []float64) *Geom {
 	return c.newNonNilGeom(C.GEOSGeom_createPoint_r(c.handle, s), nil)
 }
 
+// NewPointFromXY returns a new point with a x and y.
+func (c *Context) NewPointFromXY(x, y float64) *Geom {
+	return c.newNonNilGeom(C.GEOSGeom_createPointFromXY_r(c.handle, C.double(x), C.double(y)), nil)
+}
+
 // NewPoints returns a new slice of points populated from coords.
 func (c *Context) NewPoints(coords [][]float64) []*Geom {
 	if coords == nil {
@@ -257,17 +272,34 @@ func (c *Context) NewPolygon(coordss [][][]float64) *Geom {
 	return c.newNonNilGeom(C.GEOSGeom_createPolygon_r(c.handle, shell, holes, C.uint(nholes)), nil)
 }
 
+// NewSTRtree returns a new STRtree.
+func (c *Context) NewSTRtree(nodeCapacity int) *STRtree {
+	c.Lock()
+	defer c.Unlock()
+	t := &STRtree{
+		context:     c,
+		strTree:     C.GEOSSTRtree_create_r(c.handle, C.size_t(nodeCapacity)),
+		itemToValue: make(map[unsafe.Pointer]any),
+		valueToItem: make(map[any]unsafe.Pointer),
+	}
+	runtime.SetFinalizer(t, (*STRtree).finalize)
+	return t
+}
+
+// OrientationIndex returns the orientation index from A to B and then to P.
+func (c *Context) OrientationIndex(Ax, Ay, Bx, By, Px, Py float64) int { //nolint:gocritic
+	c.Lock()
+	defer c.Unlock()
+	return int(C.GEOSOrientationIndex_r(c.handle, C.double(Ax), C.double(Ay), C.double(Bx), C.double(By), C.double(Px), C.double(Py)))
+}
+
 // Polygonize returns a set of geometries which contains linework that
 // represents the edges of a planar graph.
 func (c *Context) Polygonize(geoms []*Geom) *Geom {
 	c.Lock()
 	defer c.Unlock()
-	cGeoms, extraContexts := c.cGeoms(geoms)
-	defer func() {
-		for i := len(extraContexts) - 1; i >= 0; i-- {
-			extraContexts[i].Unlock()
-		}
-	}()
+	cGeoms, unlockFunc := c.cGeomsLocked(geoms)
+	defer unlockFunc()
 	return c.newNonNilGeom(C.GEOSPolygonize_r(c.handle, cGeoms, C.uint(len(geoms))), nil)
 }
 
@@ -276,18 +308,50 @@ func (c *Context) Polygonize(geoms []*Geom) *Geom {
 func (c *Context) PolygonizeValid(geoms []*Geom) *Geom {
 	c.Lock()
 	defer c.Unlock()
-	cGeoms, extraContexts := c.cGeoms(geoms)
-	defer func() {
-		for i := len(extraContexts) - 1; i >= 0; i-- {
-			extraContexts[i].Unlock()
-		}
-	}()
+	cGeoms, unlockFunc := c.cGeomsLocked(geoms)
+	defer unlockFunc()
 	return c.newNonNilGeom(C.GEOSPolygonize_valid_r(c.handle, cGeoms, C.uint(len(geoms))), nil)
 }
 
-func (c *Context) cGeoms(geoms []*Geom) (**C.struct_GEOSGeom_t, []*Context) {
+// RelatePatternMatch returns if two DE9IM patterns are consistent.
+func (c *Context) RelatePatternMatch(mat, pat string) bool {
+	matCStr := C.CString(mat)
+	defer C.free(unsafe.Pointer(matCStr))
+	patCStr := C.CString(pat)
+	defer C.free(unsafe.Pointer(patCStr))
+	c.Lock()
+	defer c.Unlock()
+	switch C.GEOSRelatePatternMatch_r(c.handle, matCStr, patCStr) {
+	case 0:
+		return false
+	case 1:
+		return true
+	default:
+		panic(c.err)
+	}
+}
+
+// SegmentIntersection returns the coordinate where two lines intersect.
+func (c *Context) SegmentIntersection(ax0, ay0, ax1, ay1, bx0, by0, bx1, by1 float64) (float64, float64, bool) {
+	c.Lock()
+	defer c.Unlock()
+	var cx, cy float64
+	switch C.GEOSSegmentIntersection_r(c.handle,
+		C.double(ax0), C.double(ay0), C.double(ax1), C.double(ay1),
+		C.double(bx0), C.double(by0), C.double(bx1), C.double(by1),
+		(*C.double)(&cx), (*C.double)(&cy)) {
+	case 1:
+		return cx, cy, true
+	case -1:
+		return 0, 0, false
+	default:
+		panic(c.err)
+	}
+}
+
+func (c *Context) cGeomsLocked(geoms []*Geom) (**C.struct_GEOSGeom_t, func()) {
 	if len(geoms) == 0 {
-		return nil, nil
+		return nil, func() {}
 	}
 	uniqueContexts := map[*Context]struct{}{c: {}}
 	var extraContexts []*Context
@@ -301,7 +365,11 @@ func (c *Context) cGeoms(geoms []*Geom) (**C.struct_GEOSGeom_t, []*Context) {
 		}
 		cGeoms = append(cGeoms, geom.geom)
 	}
-	return &cGeoms[0], extraContexts
+	return &cGeoms[0], func() {
+		for i := len(extraContexts) - 1; i >= 0; i-- {
+			extraContexts[i].Unlock()
+		}
+	}
 }
 
 func (c *Context) finish() {
@@ -355,18 +423,28 @@ func (c *Context) newCoordSeq(gs *C.struct_GEOSCoordSeq_t, finalizer func(*Coord
 }
 
 func (c *Context) newCoordsFromGEOSCoordSeq(s *C.struct_GEOSCoordSeq_t) [][]float64 {
-	var (
-		dimensions C.uint
-		size       C.uint
-	)
+	var dimensions C.uint
 	if C.GEOSCoordSeq_getDimensions_r(c.handle, s, &dimensions) == 0 {
 		panic(c.err)
 	}
+
+	var size C.uint
 	if C.GEOSCoordSeq_getSize_r(c.handle, s, &size) == 0 {
 		panic(c.err)
 	}
+
+	var hasZ C.int
+	if dimensions > 2 {
+		hasZ = 1
+	}
+
+	var hasM C.int
+	if dimensions > 3 {
+		hasM = 1
+	}
+
 	flatCoords := make([]float64, size*dimensions)
-	if C.c_GEOSCoordSeq_getFlatCoords_r(c.handle, s, size, dimensions, (*C.double)(&flatCoords[0])) == 0 {
+	if C.GEOSCoordSeq_copyToBuffer_r(c.handle, s, (*C.double)(&flatCoords[0]), hasZ, hasM) == 0 {
 		panic(c.err)
 	}
 	coords := make([][]float64, 0, size)
@@ -378,11 +456,21 @@ func (c *Context) newCoordsFromGEOSCoordSeq(s *C.struct_GEOSCoordSeq_t) [][]floa
 }
 
 func (c *Context) newGEOSCoordSeqFromCoords(coords [][]float64) *C.struct_GEOSCoordSeq_t {
+	var hasZ C.int
+	if len(coords[0]) > 2 {
+		hasZ = 1
+	}
+
+	var hasM C.int
+	if len(coords[0]) > 3 {
+		hasM = 1
+	}
+
 	flatCoords := make([]float64, 0, len(coords)*len(coords[0]))
 	for _, coord := range coords {
 		flatCoords = append(flatCoords, coord...)
 	}
-	return C.c_newGEOSCoordSeqFromFlatCoords_r(c.handle, C.uint(len(coords)), C.uint(len(coords[0])), (*C.double)(unsafe.Pointer(&flatCoords[0])))
+	return C.GEOSCoordSeq_copyFromBuffer_r(c.handle, (*C.double)(unsafe.Pointer(&flatCoords[0])), C.uint(len(coords)), hasZ, hasM)
 }
 
 func (c *Context) newGeom(geom *C.struct_GEOSGeom_t, parent *Geom) *Geom {

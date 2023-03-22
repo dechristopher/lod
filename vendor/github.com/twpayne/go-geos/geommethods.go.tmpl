@@ -2,13 +2,25 @@
 
 package geos
 
-// #include "geos.h"
+// #include "go-geos.h"
 import "C"
+
+import "unsafe"
 
 {{- range . }}
 {{-   $geosFunction := printf "GEOS%s_r" .name }}
 {{-   if .geosFunction }}
+{{-     if eq .geosFunction $geosFunction }}
+{{-       with printf "%s: do not set default .geosFunction" .name }}
+{{-         fatal . }}
+{{-       end }}
+{{-     end }}
 {{-     $geosFunction = .geosFunction }}
+{{-   end }}
+{{-   if not .comment }}
+{{      with printf "%s: comment not set" .name }}
+{{-       fatal . }}
+{{-     end }}
 {{-   end }}
 
 {{-   if eq .type "unary" }}
@@ -100,11 +112,32 @@ func (g *Geom) {{ .name }}(other *Geom{{ range .extraArgs }}, {{ .name }} {{ .ty
 		other.context.Lock()
 		defer other.context.Unlock()
 	}
+    {{- if .valueReturned }}
+	return float64(C.{{ $geosFunction }}(g.context.handle, g.geom, other.geom{{ range .extraArgs }}, {{ .type | cType }}({{ .name }}){{ end }}))
+    {{- else }}
 	var {{ $varName }} float64
 	if C.{{ $geosFunction }}(g.context.handle, g.geom, other.geom{{ range .extraArgs }}, {{ .type | cType }}({{ .name }}){{ end }}, (*C.double)(&{{ $varName }})) == 0 {
 		panic(g.context.err)
 	}
 	return {{ $varName }}
+    {{- end }}
+}
+
+{{-   else if eq .type "stringBinaryProperty" }}
+{{-     $varName := .name | firstRuneToLower }}
+
+{{ if .comment }}// {{ .name }} {{ .comment }}.{{ end }}
+func (g *Geom) {{ .name }}(other *Geom{{ range .extraArgs }}, {{ .name }} {{ .type }}{{ end }}) string {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	{{ $varName }}CStr := C.{{ $geosFunction }}(g.context.handle, g.geom, other.geom{{ range .extraArgs }}, {{ .type | cType }}({{ .name }}){{ end }})
+	defer C.GEOSFree_r(g.context.handle, unsafe.Pointer({{ $varName }}CStr))
+	return C.GoString({{ $varName }}CStr)
 }
 
 {{-  end }}

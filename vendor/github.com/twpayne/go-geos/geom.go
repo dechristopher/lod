@@ -2,7 +2,8 @@
 
 package geos
 
-// #include "geos.h"
+// #include <stdlib.h>
+// #include "go-geos.h"
 import "C"
 
 import (
@@ -121,6 +122,28 @@ func (g *Geom) NearestPoints(other *Geom) [][]float64 {
 	return g.context.newCoordsFromGEOSCoordSeq(s)
 }
 
+func (g *Geom) Normalize() *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if C.GEOSNormalize_r(g.context.handle, g.geom) != 0 {
+		panic(g.context.err)
+	}
+	return g
+}
+
+// NumCoordinates returns the number of coordinates in g.
+func (g *Geom) NumCoordinates() int {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	numCoordinates := C.GEOSGetNumCoordinates_r(g.context.handle, g.geom)
+	if numCoordinates == -1 {
+		panic(g.context.err)
+	}
+	return int(numCoordinates)
+}
+
 // NumGeometries returns the number of geometries in g.
 func (g *Geom) NumGeometries() int {
 	g.mustNotBeDestroyed()
@@ -165,6 +188,35 @@ func (g *Geom) PolygonizeFull() (geom, cuts, dangles, invalidRings *Geom) {
 	return
 }
 
+// Precision returns g's precision.
+func (g *Geom) Precision() float64 {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return float64(C.GEOSGeom_getPrecision_r(g.context.handle, g.geom))
+}
+
+// RelatePattern returns if the DE9IM pattern for g and other matches pat.
+func (g *Geom) RelatePattern(other *Geom, pat string) bool {
+	g.mustNotBeDestroyed()
+	patCStr := C.CString(pat)
+	defer C.free(unsafe.Pointer(patCStr))
+	g.context.Lock()
+	defer g.context.Unlock()
+	if other.context != g.context {
+		other.context.Lock()
+		defer other.context.Unlock()
+	}
+	switch C.GEOSRelatePattern_r(g.context.handle, g.geom, other.geom, patCStr) {
+	case 0:
+		return false
+	case 1:
+		return true
+	default:
+		panic(g.context.err)
+	}
+}
+
 // SRID returns g's SRID.
 func (g *Geom) SRID() int {
 	g.mustNotBeDestroyed()
@@ -183,6 +235,15 @@ func (g *Geom) SetSRID(srid int) *Geom {
 	g.context.Lock()
 	defer g.context.Unlock()
 	C.GEOSSetSRID_r(g.context.handle, g.geom, C.int(srid))
+	return g
+}
+
+// SetUserData sets g's userdata and returns g.
+func (g *Geom) SetUserData(userdata uintptr) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	C.c_GEOSGeom_setUserData_r(g.context.handle, g.geom, C.uintptr_t(userdata))
 	return g
 }
 
@@ -249,6 +310,14 @@ func (g *Geom) Type() string {
 func (g *Geom) TypeID() TypeID {
 	g.mustNotBeDestroyed()
 	return g.typeID
+}
+
+// UserData returns g's userdata.
+func (g *Geom) UserData() uintptr {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return uintptr(C.c_GEOSGeom_getUserData_r(g.context.handle, g.geom))
 }
 
 func (g *Geom) finalize() {

@@ -1,6 +1,6 @@
 package geos
 
-// #include "geos.h"
+// #include "go-geos.h"
 import "C"
 
 // A CoordSeq is a coordinate sequence.
@@ -22,6 +22,19 @@ func (s *CoordSeq) Clone() *CoordSeq {
 // Dimensions returns the dimensions of s.
 func (s *CoordSeq) Dimensions() int {
 	return s.dimensions
+}
+
+// IsCCW returns if s is counter-clockwise.
+func (s *CoordSeq) IsCCW() bool {
+	s.context.Lock()
+	defer s.context.Unlock()
+	var cIsCCW C.char
+	switch C.GEOSCoordSeq_isCCW_r(s.context.handle, s.s, &cIsCCW) {
+	case 1:
+		return cIsCCW != 0
+	default:
+		panic(s.context.err)
+	}
 }
 
 // Ordinate returns the idx-th dim coordinate of s.
@@ -114,7 +127,15 @@ func (s *CoordSeq) ToCoords() [][]float64 {
 		return nil
 	}
 	flatCoords := make([]float64, s.size*s.dimensions)
-	if C.c_GEOSCoordSeq_getFlatCoords_r(s.context.handle, s.s, C.uint(s.size), C.uint(s.dimensions), (*C.double)(&flatCoords[0])) == 0 {
+	var hasZ C.int
+	if s.dimensions > 2 {
+		hasZ = 1
+	}
+	var hasM C.int
+	if s.dimensions > 3 {
+		hasM = 1
+	}
+	if C.GEOSCoordSeq_copyToBuffer_r(s.context.handle, s.s, (*C.double)(&flatCoords[0]), hasZ, hasM) == 0 {
 		panic(s.context.err)
 	}
 	coords := make([][]float64, s.size)
