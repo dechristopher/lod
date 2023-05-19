@@ -28,7 +28,7 @@ github.com/go-redis/redis/v8/internal/pool
 github.com/go-redis/redis/v8/internal/proto
 github.com/go-redis/redis/v8/internal/rand
 github.com/go-redis/redis/v8/internal/util
-# github.com/gofiber/fiber/v2 v2.42.0
+# github.com/gofiber/fiber/v2 v2.46.0
 ## explicit; go 1.20
 github.com/gofiber/fiber/v2
 github.com/gofiber/fiber/v2/internal/go-ole
@@ -66,7 +66,7 @@ github.com/klauspost/compress/zlib
 # github.com/mattn/go-colorable v0.1.13
 ## explicit; go 1.15
 github.com/mattn/go-colorable
-# github.com/mattn/go-isatty v0.0.17
+# github.com/mattn/go-isatty v0.0.18
 ## explicit; go 1.15
 github.com/mattn/go-isatty
 # github.com/mattn/go-runewidth v0.0.14
@@ -75,8 +75,8 @@ github.com/mattn/go-runewidth
 # github.com/matttproud/golang_protobuf_extensions v1.0.4
 ## explicit; go 1.9
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/philhofer/fwd v1.1.1
-## explicit
+# github.com/philhofer/fwd v1.1.2
+## explicit; go 1.15
 github.com/philhofer/fwd
 # github.com/pkg/errors v0.9.1
 ## explicit
@@ -106,11 +106,11 @@ github.com/rivo/uniseg
 # github.com/savsgio/dictpool v0.0.0-20221023140959-7bf2e61cea94
 ## explicit; go 1.13
 github.com/savsgio/dictpool
-# github.com/savsgio/gotils v0.0.0-20220530130905-52f3993e8d6d
-## explicit; go 1.13
+# github.com/savsgio/gotils v0.0.0-20230208104028-c358bd845dee
+## explicit; go 1.20
 github.com/savsgio/gotils/strconv
-# github.com/tinylib/msgp v1.1.6
-## explicit; go 1.14
+# github.com/tinylib/msgp v1.1.8
+## explicit; go 1.15
 github.com/tinylib/msgp/msgp
 # github.com/twpayne/go-geos v0.13.1
 ## explicit; go 1.18
@@ -118,7 +118,7 @@ github.com/twpayne/go-geos
 # github.com/valyala/bytebufferpool v1.0.0
 ## explicit
 github.com/valyala/bytebufferpool
-# github.com/valyala/fasthttp v1.45.0
+# github.com/valyala/fasthttp v1.47.0
 ## explicit; go 1.20
 github.com/valyala/fasthttp
 github.com/valyala/fasthttp/fasthttpadaptor
@@ -131,7 +131,7 @@ github.com/valyala/tcplisten
 # golang.org/x/sync v0.1.0
 ## explicit
 golang.org/x/sync/singleflight
-# golang.org/x/sys v0.6.0
+# golang.org/x/sys v0.8.0
 ## explicit; go 1.17
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
