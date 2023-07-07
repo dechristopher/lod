@@ -11,7 +11,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.14.0
 	github.com/prometheus/client_model v0.3.0
-	github.com/twpayne/go-geos v0.13.1
+	github.com/twpayne/go-geos v0.13.2
 	github.com/valyala/fasthttp v1.45.0
 	golang.org/x/sync v0.1.0
 )
