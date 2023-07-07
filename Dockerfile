@@ -61,7 +61,7 @@ RUN cd /go/src/github.com/dechristopher/lod/cmd/lod \
 	&& chmod a+x /opt/lod
 
 # ---- Run Stage ----
-FROM alpine:3.17
+FROM alpine:3.18
 
 LABEL maintainer="Andrew DeChristopher"
 
