@@ -8,7 +8,7 @@ on:
 jobs:
   gen_version:
     name: Set LOD version
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       # on release, we want to use release.tag_name for the version
@@ -25,7 +25,7 @@ jobs:
   build_linux:
     name: Build LOD for Linux
     needs: gen_version
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Check out code
@@ -138,7 +138,7 @@ jobs:
   build_docker:
     name: Build and Publish LOD Docker Image
     needs: gen_version
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     env:
       DH_ORG: dechristopher
       DH_REPO: lod
