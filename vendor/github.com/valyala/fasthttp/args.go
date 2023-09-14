@@ -63,7 +63,6 @@ func (a *Args) Reset() {
 
 // CopyTo copies all args to dst.
 func (a *Args) CopyTo(dst *Args) {
-	dst.Reset()
 	dst.args = copyArgs(dst.args, a.args)
 }
 
@@ -599,9 +598,8 @@ func decodeArgAppendNoPlus(dst, src []byte) []byte {
 	if idx < 0 {
 		// fast path: src doesn't contain encoded chars
 		return append(dst, src...)
-	} else {
-		dst = append(dst, src[:idx]...)
 	}
+	dst = append(dst, src[:idx]...)
 
 	// slow path
 	for i := idx; i < len(src); i++ {

@@ -19,10 +19,8 @@ import (
 
 var errNoCertOrKeyProvided = errors.New("cert or key has not provided")
 
-var (
-	// Deprecated: ErrAlreadyServing is never returned from Serve. See issue #633.
-	ErrAlreadyServing = errors.New("Server is already serving connections")
-)
+// Deprecated: ErrAlreadyServing is never returned from Serve. See issue #633.
+var ErrAlreadyServing = errors.New("Server is already serving connections")
 
 // ServeConn serves HTTP requests from the given connection
 // using the given handler.
@@ -1679,14 +1677,13 @@ func (s *Server) ListenAndServeTLSEmbed(addr string, certData, keyData []byte) e
 // the function will use previously added TLS configuration.
 func (s *Server) ServeTLS(ln net.Listener, certFile, keyFile string) error {
 	s.mu.Lock()
-	err := s.AppendCert(certFile, keyFile)
-	if err != nil && err != errNoCertOrKeyProvided {
-		s.mu.Unlock()
-		return err
-	}
-	if s.TLSConfig == nil {
-		s.mu.Unlock()
-		return errNoCertOrKeyProvided
+	s.configTLS()
+	configHasCert := len(s.TLSConfig.Certificates) > 0 || s.TLSConfig.GetCertificate != nil
+	if !configHasCert || certFile != "" || keyFile != "" {
+		if err := s.AppendCert(certFile, keyFile); err != nil {
+			s.mu.Unlock()
+			return err
+		}
 	}
 
 	// BuildNameToCertificate has been deprecated since 1.14.
@@ -1708,15 +1705,13 @@ func (s *Server) ServeTLS(ln net.Listener, certFile, keyFile string) error {
 // the function will use previously added TLS configuration.
 func (s *Server) ServeTLSEmbed(ln net.Listener, certData, keyData []byte) error {
 	s.mu.Lock()
-
-	err := s.AppendCertEmbed(certData, keyData)
-	if err != nil && err != errNoCertOrKeyProvided {
-		s.mu.Unlock()
-		return err
-	}
-	if s.TLSConfig == nil {
-		s.mu.Unlock()
-		return errNoCertOrKeyProvided
+	s.configTLS()
+	configHasCert := len(s.TLSConfig.Certificates) > 0 || s.TLSConfig.GetCertificate != nil
+	if !configHasCert || len(certData) != 0 || len(keyData) != 0 {
+		if err := s.AppendCertEmbed(certData, keyData); err != nil {
+			s.mu.Unlock()
+			return err
+		}
 	}
 
 	// BuildNameToCertificate has been deprecated since 1.14.
@@ -1790,15 +1785,12 @@ func (s *Server) Serve(ln net.Listener) error {
 	maxWorkersCount := s.getConcurrency()
 
 	s.mu.Lock()
-	{
-		s.ln = append(s.ln, ln)
-		if s.done == nil {
-			s.done = make(chan struct{})
-		}
-
-		if s.concurrencyCh == nil {
-			s.concurrencyCh = make(chan struct{}, maxWorkersCount)
-		}
+	s.ln = append(s.ln, ln)
+	if s.done == nil {
+		s.done = make(chan struct{})
+	}
+	if s.concurrencyCh == nil {
+		s.concurrencyCh = make(chan struct{}, maxWorkersCount)
 	}
 	s.mu.Unlock()
 
@@ -1929,9 +1921,6 @@ func acceptConn(s *Server, ln net.Listener, lastPerIPErrorTime *time.Time) (net.
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			if c != nil {
-				panic("BUG: net.Listener returned non-nil conn and non-nil error")
-			}
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				s.logger().Printf("Timeout error when accepting new connections: %v", netErr)
 				time.Sleep(time.Second)
@@ -1942,9 +1931,6 @@ func acceptConn(s *Server, ln net.Listener, lastPerIPErrorTime *time.Time) (net.
 				return nil, err
 			}
 			return nil, io.EOF
-		}
-		if c == nil {
-			panic("BUG: net.Listener returned (nil, nil)")
 		}
 
 		if tc, ok := c.(*net.TCPConn); ok && s.TCPKeepalive {
@@ -2578,7 +2564,7 @@ func (ctx *RequestCtx) LastTimeoutErrorResponse() *Response {
 
 func writeResponse(ctx *RequestCtx, w *bufio.Writer) error {
 	if ctx.timeoutResponse != nil {
-		panic("BUG: cannot write timed out response")
+		return errors.New("cannot write timed out response")
 	}
 	err := ctx.Response.Write(w)
 
@@ -2596,8 +2582,8 @@ func acquireByteReader(ctxP **RequestCtx) (*bufio.Reader, error) {
 	c := ctx.c
 	s.releaseCtx(ctx)
 
-	// Make GC happy, so it could garbage collect ctx
-	// while we waiting for the next request.
+	// Make GC happy, so it could garbage collect ctx while we wait for the
+	// next request.
 	ctx = nil
 	*ctxP = nil
 
@@ -2612,6 +2598,7 @@ func acquireByteReader(ctxP **RequestCtx) (*bufio.Reader, error) {
 		return nil, io.EOF
 	}
 	if n != 1 {
+		// developer sanity-check
 		panic("BUG: Reader must return at least one byte")
 	}
 
@@ -2787,19 +2774,23 @@ func (fa *fakeAddrer) LocalAddr() net.Addr {
 }
 
 func (fa *fakeAddrer) Read(p []byte) (int, error) {
+	// developer sanity-check
 	panic("BUG: unexpected Read call")
 }
 
 func (fa *fakeAddrer) Write(p []byte) (int, error) {
+	// developer sanity-check
 	panic("BUG: unexpected Write call")
 }
 
 func (fa *fakeAddrer) Close() error {
+	// developer sanity-check
 	panic("BUG: unexpected Close call")
 }
 
 func (s *Server) releaseCtx(ctx *RequestCtx) {
 	if ctx.timeoutResponse != nil {
+		// developer sanity-check
 		panic("BUG: cannot release timed out RequestCtx")
 	}
 

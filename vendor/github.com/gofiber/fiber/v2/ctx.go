@@ -27,7 +27,6 @@ import (
 	"github.com/gofiber/fiber/v2/internal/schema"
 	"github.com/gofiber/fiber/v2/utils"
 
-	"github.com/savsgio/dictpool"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 )
@@ -97,7 +96,7 @@ type Ctx struct {
 	values              [maxParams]string    // Route parameter values
 	fasthttp            *fasthttp.RequestCtx // Reference to *fasthttp.RequestCtx
 	matched             bool                 // Non use route matched
-	viewBindMap         *dictpool.Dict       // Default view map to bind template engine
+	viewBindMap         sync.Map             // Default view map to bind template engine
 }
 
 // TLSHandler object
@@ -188,82 +187,28 @@ func (app *App) ReleaseCtx(c *Ctx) {
 	// Reset values
 	c.route = nil
 	c.fasthttp = nil
-	if c.viewBindMap != nil {
-		dictpool.ReleaseDict(c.viewBindMap)
-		c.viewBindMap = nil
-	}
+	c.viewBindMap = sync.Map{}
 	app.pool.Put(c)
 }
 
 // Accepts checks if the specified extensions or content types are acceptable.
 func (c *Ctx) Accepts(offers ...string) string {
-	if len(offers) == 0 {
-		return ""
-	}
-	header := c.Get(HeaderAccept)
-	if header == "" {
-		return offers[0]
-	}
-
-	spec, commaPos := "", 0
-	for len(header) > 0 && commaPos != -1 {
-		commaPos = strings.IndexByte(header, ',')
-		if commaPos != -1 {
-			spec = utils.Trim(header[:commaPos], ' ')
-		} else {
-			spec = utils.TrimLeft(header, ' ')
-		}
-		if factorSign := strings.IndexByte(spec, ';'); factorSign != -1 {
-			spec = spec[:factorSign]
-		}
-
-		var mimetype string
-		for _, offer := range offers {
-			if len(offer) == 0 {
-				continue
-				// Accept: */*
-			} else if spec == "*/*" {
-				return offer
-			}
-
-			if strings.IndexByte(offer, '/') != -1 {
-				mimetype = offer // MIME type
-			} else {
-				mimetype = utils.GetMIME(offer) // extension
-			}
-
-			if spec == mimetype {
-				// Accept: <MIME_type>/<MIME_subtype>
-				return offer
-			}
-
-			s := strings.IndexByte(mimetype, '/')
-			// Accept: <MIME_type>/*
-			if strings.HasPrefix(spec, mimetype[:s]) && (spec[s:] == "/*" || mimetype[s:] == "/*") {
-				return offer
-			}
-		}
-		if commaPos != -1 {
-			header = header[commaPos+1:]
-		}
-	}
-
-	return ""
+	return getOffer(c.Get(HeaderAccept), acceptsOfferType, offers...)
 }
 
 // AcceptsCharsets checks if the specified charset is acceptable.
 func (c *Ctx) AcceptsCharsets(offers ...string) string {
-	return getOffer(c.Get(HeaderAcceptCharset), offers...)
+	return getOffer(c.Get(HeaderAcceptCharset), acceptsOffer, offers...)
 }
 
 // AcceptsEncodings checks if the specified encoding is acceptable.
 func (c *Ctx) AcceptsEncodings(offers ...string) string {
-	return getOffer(c.Get(HeaderAcceptEncoding), offers...)
+	return getOffer(c.Get(HeaderAcceptEncoding), acceptsOffer, offers...)
 }
 
 // AcceptsLanguages checks if the specified language is acceptable.
 func (c *Ctx) AcceptsLanguages(offers ...string) string {
-	return getOffer(c.Get(HeaderAcceptLanguage), offers...)
+	return getOffer(c.Get(HeaderAcceptLanguage), acceptsOffer, offers...)
 }
 
 // App returns the *App reference to the instance of the Fiber application
@@ -315,31 +260,92 @@ func (c *Ctx) BaseURL() string {
 	return c.baseURI
 }
 
-// Body contains the raw body submitted in a POST request.
+// BodyRaw contains the raw body submitted in a POST request.
 // Returned value is only valid within the handler. Do not store any references.
 // Make copies or use the Immutable setting instead.
+func (c *Ctx) BodyRaw() []byte {
+	return c.fasthttp.Request.Body()
+}
+
+func (c *Ctx) tryDecodeBodyInOrder(
+	originalBody *[]byte,
+	encodings []string,
+) ([]byte, uint8, error) {
+	var (
+		err             error
+		body            []byte
+		decodesRealized uint8
+	)
+
+	for index, encoding := range encodings {
+		decodesRealized++
+		switch encoding {
+		case StrGzip:
+			body, err = c.fasthttp.Request.BodyGunzip()
+		case StrBr, StrBrotli:
+			body, err = c.fasthttp.Request.BodyUnbrotli()
+		case StrDeflate:
+			body, err = c.fasthttp.Request.BodyInflate()
+		default:
+			decodesRealized--
+			if len(encodings) == 1 {
+				body = c.fasthttp.Request.Body()
+			}
+			return body, decodesRealized, nil
+		}
+
+		if err != nil {
+			return nil, decodesRealized, err
+		}
+
+		// Only execute body raw update if it has a next iteration to try to decode
+		if index < len(encodings)-1 && decodesRealized > 0 {
+			if index == 0 {
+				tempBody := c.fasthttp.Request.Body()
+				*originalBody = make([]byte, len(tempBody))
+				copy(*originalBody, tempBody)
+			}
+			c.fasthttp.Request.SetBodyRaw(body)
+		}
+	}
+
+	return body, decodesRealized, nil
+}
+
+// Body contains the raw body submitted in a POST request.
+// This method will decompress the body if the 'Content-Encoding' header is provided.
+// It returns the original (or decompressed) body data which is valid only within the handler.
+// Don't store direct references to the returned data.
+// If you need to keep the body's data later, make a copy or use the Immutable option.
 func (c *Ctx) Body() []byte {
-	var err error
-	var encoding string
-	var body []byte
+	var (
+		err                error
+		body, originalBody []byte
+		headerEncoding     string
+		encodingOrder      = []string{"", "", ""}
+	)
+
 	// faster than peek
 	c.Request().Header.VisitAll(func(key, value []byte) {
 		if c.app.getString(key) == HeaderContentEncoding {
-			encoding = c.app.getString(value)
+			headerEncoding = c.app.getString(value)
 		}
 	})
 
-	switch encoding {
-	case StrGzip:
-		body, err = c.fasthttp.Request.BodyGunzip()
-	case StrBr, StrBrotli:
-		body, err = c.fasthttp.Request.BodyUnbrotli()
-	case StrDeflate:
-		body, err = c.fasthttp.Request.BodyInflate()
-	default:
-		body = c.fasthttp.Request.Body()
+	// Split and get the encodings list, in order to attend the
+	// rule defined at: https://www.rfc-editor.org/rfc/rfc9110#section-8.4-5
+	encodingOrder = getSplicedStrList(headerEncoding, encodingOrder)
+	if len(encodingOrder) == 0 {
+		return c.fasthttp.Request.Body()
 	}
 
+	var decodesRealized uint8
+	body, decodesRealized, err = c.tryDecodeBodyInOrder(&originalBody, encodingOrder)
+
+	// Ensure that the body will be the original
+	if originalBody != nil && decodesRealized > 0 {
+		c.fasthttp.Request.SetBodyRaw(originalBody)
+	}
 	if err != nil {
 		return []byte(err.Error())
 	}
@@ -390,7 +396,7 @@ func (c *Ctx) BodyParser(out interface{}) error {
 				k, err = parseParamSquareBrackets(k)
 			}
 
-			if strings.Contains(v, ",") && equalFieldType(out, reflect.Slice, k) {
+			if c.app.config.EnableSplittingOnParsers && strings.Contains(v, ",") && equalFieldType(out, reflect.Slice, k) {
 				values := strings.Split(v, ",")
 				for i := 0; i < len(values); i++ {
 					data[k] = append(data[k], values[i])
@@ -648,7 +654,7 @@ func (c *Ctx) GetRespHeader(key string, defaultValue ...string) string {
 func (c *Ctx) GetReqHeaders() map[string]string {
 	headers := make(map[string]string)
 	c.Request().Header.VisitAll(func(k, v []byte) {
-		headers[string(k)] = c.app.getString(v)
+		headers[c.app.getString(k)] = c.app.getString(v)
 	})
 
 	return headers
@@ -660,7 +666,7 @@ func (c *Ctx) GetReqHeaders() map[string]string {
 func (c *Ctx) GetRespHeaders() map[string]string {
 	headers := make(map[string]string)
 	c.Response().Header.VisitAll(func(k, v []byte) {
-		headers[string(k)] = c.app.getString(v)
+		headers[c.app.getString(k)] = c.app.getString(v)
 	})
 
 	return headers
@@ -955,7 +961,7 @@ func (c *Ctx) Next() error {
 	// Increment handler index
 	c.indexHandler++
 	var err error
-	// Did we executed all route handlers?
+	// Did we execute all route handlers?
 	if c.indexHandler < len(c.route.Handlers) {
 		// Continue route stack
 		err = c.route.Handlers[c.indexHandler](c)
@@ -1105,6 +1111,35 @@ func (c *Ctx) Query(key string, defaultValue ...string) string {
 	return defaultString(c.app.getString(c.fasthttp.QueryArgs().Peek(key)), defaultValue)
 }
 
+// Queries returns a map of query parameters and their values.
+//
+// GET /?name=alex&wanna_cake=2&id=
+// Queries()["name"] == "alex"
+// Queries()["wanna_cake"] == "2"
+// Queries()["id"] == ""
+//
+// GET /?field1=value1&field1=value2&field2=value3
+// Queries()["field1"] == "value2"
+// Queries()["field2"] == "value3"
+//
+// GET /?list_a=1&list_a=2&list_a=3&list_b[]=1&list_b[]=2&list_b[]=3&list_c=1,2,3
+// Queries()["list_a"] == "3"
+// Queries()["list_b[]"] == "3"
+// Queries()["list_c"] == "1,2,3"
+//
+// GET /api/search?filters.author.name=John&filters.category.name=Technology&filters[customer][name]=Alice&filters[status]=pending
+// Queries()["filters.author.name"] == "John"
+// Queries()["filters.category.name"] == "Technology"
+// Queries()["filters[customer][name]"] == "Alice"
+// Queries()["filters[status]"] == "pending"
+func (c *Ctx) Queries() map[string]string {
+	m := make(map[string]string, c.Context().QueryArgs().Len())
+	c.Context().QueryArgs().VisitAll(func(key, value []byte) {
+		m[c.app.getString(key)] = c.app.getString(value)
+	})
+	return m
+}
+
 // QueryInt returns integer value of key string parameter in the url.
 // Default to empty or invalid key is 0.
 //
@@ -1132,17 +1167,17 @@ func (c *Ctx) QueryInt(key string, defaultValue ...int) int {
 //	Get /?name=alex&want_pizza=false&id=
 //	QueryBool("want_pizza") == false
 //	QueryBool("want_pizza", true) == false
-//	QueryBool("alex") == true
-//	QueryBool("alex", false) == false
-//	QueryBool("id") == true
-//	QueryBool("id", false) == false
+//	QueryBool("name") == false
+//	QueryBool("name", true) == true
+//	QueryBool("id") == false
+//	QueryBool("id", true) == true
 func (c *Ctx) QueryBool(key string, defaultValue ...bool) bool {
 	value, err := strconv.ParseBool(c.app.getString(c.fasthttp.QueryArgs().Peek(key)))
 	if err != nil {
 		if len(defaultValue) > 0 {
 			return defaultValue[0]
 		}
-		return true
+		return false
 	}
 	return value
 }
@@ -1185,7 +1220,7 @@ func (c *Ctx) QueryParser(out interface{}) error {
 			k, err = parseParamSquareBrackets(k)
 		}
 
-		if strings.Contains(v, ",") && equalFieldType(out, reflect.Slice, k) {
+		if c.app.config.EnableSplittingOnParsers && strings.Contains(v, ",") && equalFieldType(out, reflect.Slice, k) {
 			values := strings.Split(v, ",")
 			for i := 0; i < len(values); i++ {
 				data[k] = append(data[k], values[i])
@@ -1234,7 +1269,7 @@ func (c *Ctx) ReqHeaderParser(out interface{}) error {
 		k := c.app.getString(key)
 		v := c.app.getString(val)
 
-		if strings.Contains(v, ",") && equalFieldType(out, reflect.Slice, k) {
+		if c.app.config.EnableSplittingOnParsers && strings.Contains(v, ",") && equalFieldType(out, reflect.Slice, k) {
 			values := strings.Split(v, ",")
 			for i := 0; i < len(values); i++ {
 				data[k] = append(data[k], values[i])
@@ -1375,13 +1410,9 @@ func (c *Ctx) Redirect(location string, status ...int) error {
 // Variables are read by the Render method and may be overwritten.
 func (c *Ctx) Bind(vars Map) error {
 	// init viewBindMap - lazy map
-	if c.viewBindMap == nil {
-		c.viewBindMap = dictpool.AcquireDict()
-	}
 	for k, v := range vars {
-		c.viewBindMap.Set(k, v)
+		c.viewBindMap.Store(k, v)
 	}
-
 	return nil
 }
 
@@ -1520,14 +1551,16 @@ func (c *Ctx) Render(name string, bind interface{}, layouts ...string) error {
 func (c *Ctx) renderExtensions(bind interface{}) {
 	if bindMap, ok := bind.(Map); ok {
 		// Bind view map
-		if c.viewBindMap != nil {
-			for _, v := range c.viewBindMap.D {
-				// make sure key does not exist already
-				if _, ok := bindMap[v.Key]; !ok {
-					bindMap[v.Key] = v.Value
-				}
+		c.viewBindMap.Range(func(key, value interface{}) bool {
+			keyValue, ok := key.(string)
+			if !ok {
+				return true
 			}
-		}
+			if _, ok := bindMap[keyValue]; !ok {
+				bindMap[keyValue] = value
+			}
+			return true
+		})
 
 		// Check if the PassLocalsToViews option is enabled (by default it is disabled)
 		if c.app.config.PassLocalsToViews {
@@ -1854,11 +1887,12 @@ func (c *Ctx) IsProxyTrusted() bool {
 	return false
 }
 
+var localHosts = [...]string{"127.0.0.1", "::1"}
+
 // IsLocalHost will return true if address is a localhost address.
 func (*Ctx) isLocalHost(address string) bool {
-	localHosts := []string{"127.0.0.1", "0.0.0.0", "::1"}
 	for _, h := range localHosts {
-		if strings.Contains(address, h) {
+		if address == h {
 			return true
 		}
 	}
@@ -1867,9 +1901,5 @@ func (*Ctx) isLocalHost(address string) bool {
 
 // IsFromLocal will return true if request came from local.
 func (c *Ctx) IsFromLocal() bool {
-	ips := c.IPs()
-	if len(ips) == 0 {
-		ips = append(ips, c.IP())
-	}
-	return c.isLocalHost(ips[0])
+	return c.isLocalHost(c.fasthttp.RemoteIP().String())
 }
