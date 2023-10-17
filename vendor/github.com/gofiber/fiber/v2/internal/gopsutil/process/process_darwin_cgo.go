@@ -1,11 +1,11 @@
 //go:build darwin && cgo
-// +build darwin,cgo
 
 package process
 
 // #include <stdlib.h>
 // #include <libproc.h>
 import "C"
+
 import (
 	"context"
 	"fmt"

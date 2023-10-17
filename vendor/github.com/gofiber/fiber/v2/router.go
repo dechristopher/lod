@@ -6,6 +6,7 @@ package fiber
 
 import (
 	"fmt"
+	"html"
 	"sort"
 	"strconv"
 	"strings"
@@ -46,9 +47,11 @@ type Router interface {
 
 // Route is a struct that holds all metadata for each registered handler.
 type Route struct {
+	// always keep in sync with the copy method "app.copyRoute"
 	// Data for routing
 	pos         uint32      // Position in stack -> important for the sort of the matched routes
 	use         bool        // USE matches path prefixes
+	mount       bool        // Indicated a mounted app on a specific route
 	star        bool        // Path equals '*'
 	root        bool        // Path equals '/'
 	path        string      // Prettified path
@@ -105,18 +108,25 @@ func (app *App) next(c *Ctx) (bool, error) {
 	if !ok {
 		tree = app.treeStack[c.methodINT][""]
 	}
-	lenr := len(tree) - 1
+	lenTree := len(tree) - 1
 
 	// Loop over the route stack starting from previous index
-	for c.indexRoute < lenr {
+	for c.indexRoute < lenTree {
 		// Increment route index
 		c.indexRoute++
 
 		// Get *Route
 		route := tree[c.indexRoute]
 
+		var match bool
+		var err error
+		// skip for mounted apps
+		if route.mount {
+			continue
+		}
+
 		// Check if it matches the request path
-		match := route.match(c.detectionPath, c.path, &c.values)
+		match = route.match(c.detectionPath, c.path, &c.values)
 		if !match {
 			// No match, next route
 			continue
@@ -131,12 +141,14 @@ func (app *App) next(c *Ctx) (bool, error) {
 
 		// Execute first handler of route
 		c.indexHandler = 0
-		err := route.Handlers[0](c)
+		if len(route.Handlers) > 0 {
+			err = route.Handlers[0](c)
+		}
 		return match, err // Stop scanning the stack
 	}
 
 	// If c.Next() does not match, return 404
-	err := NewError(StatusNotFound, "Cannot "+c.method+" "+c.pathOriginal)
+	err := NewError(StatusNotFound, "Cannot "+c.method+" "+html.EscapeString(c.pathOriginal))
 	if !c.matched && app.methodExist(c) {
 		// If no match, scan stack again if other methods match the request
 		// Moved from app.handler because middleware may break the route chain
@@ -173,7 +185,7 @@ func (app *App) handler(rctx *fasthttp.RequestCtx) { //revive:disable-line:confu
 func (app *App) addPrefixToRoute(prefix string, route *Route) *Route {
 	prefixedPath := getGroupPath(prefix, route.Path)
 	prettyPath := prefixedPath
-	// Case sensitive routing, all to lowercase
+	// Case-sensitive routing, all to lowercase
 	if !app.config.CaseSensitive {
 		prettyPath = utils.ToLower(prettyPath)
 	}
@@ -194,14 +206,18 @@ func (app *App) addPrefixToRoute(prefix string, route *Route) *Route {
 func (*App) copyRoute(route *Route) *Route {
 	return &Route{
 		// Router booleans
-		use:  route.use,
-		star: route.star,
-		root: route.root,
+		use:   route.use,
+		mount: route.mount,
+		star:  route.star,
+		root:  route.root,
 
 		// Path data
 		path:        route.path,
 		routeParser: route.routeParser,
 		Params:      route.Params,
+
+		// misc
+		pos: route.pos,
 
 		// Public data
 		Path:     route.Path,
@@ -210,15 +226,17 @@ func (*App) copyRoute(route *Route) *Route {
 	}
 }
 
-func (app *App) register(method, pathRaw string, group *Group, handlers ...Handler) Router {
+func (app *App) register(method, pathRaw string, group *Group, handlers ...Handler) {
 	// Uppercase HTTP methods
 	method = utils.ToUpper(method)
 	// Check if the HTTP method is valid unless it's USE
 	if method != methodUse && app.methodInt(method) == -1 {
 		panic(fmt.Sprintf("add: invalid http method %s\n", method))
 	}
+	// is mounted app
+	isMount := group != nil && group.app != app
 	// A route requires atleast one ctx handler
-	if len(handlers) == 0 {
+	if len(handlers) == 0 && !isMount {
 		panic(fmt.Sprintf("missing handler in route: %s\n", pathRaw))
 	}
 	// Cannot have an empty path
@@ -231,7 +249,7 @@ func (app *App) register(method, pathRaw string, group *Group, handlers ...Handl
 	}
 	// Create a stripped path in-case sensitive / trailing slashes
 	pathPretty := pathRaw
-	// Case sensitive routing, all to lowercase
+	// Case-sensitive routing, all to lowercase
 	if !app.config.CaseSensitive {
 		pathPretty = utils.ToLower(pathPretty)
 	}
@@ -252,9 +270,10 @@ func (app *App) register(method, pathRaw string, group *Group, handlers ...Handl
 	// Create route metadata without pointer
 	route := Route{
 		// Router booleans
-		use:  isUse,
-		star: isStar,
-		root: isRoot,
+		use:   isUse,
+		mount: isMount,
+		star:  isStar,
+		root:  isRoot,
 
 		// Path data
 		path:        RemoveEscapeChar(pathPretty),
@@ -278,17 +297,16 @@ func (app *App) register(method, pathRaw string, group *Group, handlers ...Handl
 		for _, m := range app.config.RequestMethods {
 			// Create a route copy to avoid duplicates during compression
 			r := route
-			app.addRoute(m, &r)
+			app.addRoute(m, &r, isMount)
 		}
 	} else {
 		// Add route to stack
-		app.addRoute(method, &route)
+		app.addRoute(method, &route, isMount)
 	}
-	return app
 }
 
-func (app *App) registerStatic(prefix, root string, config ...Static) Router {
-	// For security we want to restrict to the current work directory.
+func (app *App) registerStatic(prefix, root string, config ...Static) {
+	// For security, we want to restrict to the current work directory.
 	if root == "" {
 		root = "."
 	}
@@ -300,7 +318,7 @@ func (app *App) registerStatic(prefix, root string, config ...Static) Router {
 	if prefix[0] != '/' {
 		prefix = "/" + prefix
 	}
-	// in case sensitive routing, all to lowercase
+	// in case-sensitive routing, all to lowercase
 	if !app.config.CaseSensitive {
 		prefix = utils.ToLower(prefix)
 	}
@@ -423,7 +441,6 @@ func (app *App) registerStatic(prefix, root string, config ...Static) Router {
 	app.addRoute(MethodGet, &route)
 	// Add HEAD route
 	app.addRoute(MethodHead, &route)
-	return app
 }
 
 func (app *App) addRoute(method string, route *Route, isMounted ...bool) {
@@ -438,7 +455,7 @@ func (app *App) addRoute(method string, route *Route, isMounted ...bool) {
 
 	// prevent identically route registration
 	l := len(app.stack[m])
-	if l > 0 && app.stack[m][l-1].Path == route.Path && route.use == app.stack[m][l-1].use {
+	if l > 0 && app.stack[m][l-1].Path == route.Path && route.use == app.stack[m][l-1].use && !route.mount && !app.stack[m][l-1].mount {
 		preRoute := app.stack[m][l-1]
 		preRoute.Handlers = append(preRoute.Handlers, route.Handlers...)
 	} else {
