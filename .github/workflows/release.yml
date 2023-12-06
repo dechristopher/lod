@@ -40,7 +40,7 @@ jobs:
         run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
 
       - name: Set up Go 1.19.3
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.19.3
 
@@ -97,7 +97,7 @@ jobs:
         run: echo "VERSION=$(cat version/version.txt | sed -e 's/^v//')" >> $GITHUB_ENV
 
       - name: Set up Go 1.19.3
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: 1.19.3
 
