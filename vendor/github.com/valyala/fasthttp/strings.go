@@ -19,7 +19,6 @@ var (
 	strCRLF                     = []byte("\r\n")
 	strHTTP                     = []byte("http")
 	strHTTPS                    = []byte("https")
-	strHTTP10                   = []byte("HTTP/1.0")
 	strHTTP11                   = []byte("HTTP/1.1")
 	strColon                    = []byte(":")
 	strColonSlashSlash          = []byte("://")
@@ -57,6 +56,7 @@ var (
 	strProxyAuthenticate  = []byte(HeaderProxyAuthenticate)
 	strProxyAuthorization = []byte(HeaderProxyAuthorization)
 	strWWWAuthenticate    = []byte(HeaderWWWAuthenticate)
+	strVary               = []byte(HeaderVary)
 
 	strCookieExpires        = []byte("expires")
 	strCookieDomain         = []byte("domain")
