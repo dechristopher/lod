@@ -19,10 +19,9 @@ import (
 
 var errNoCertOrKeyProvided = errors.New("cert or key has not provided")
 
-var (
-	// Deprecated: ErrAlreadyServing is never returned from Serve. See issue #633.
-	ErrAlreadyServing = errors.New("Server is already serving connections")
-)
+// ErrAlreadyServing is deprecated.
+// Deprecated: ErrAlreadyServing is never returned from Serve. See issue #633.
+var ErrAlreadyServing = errors.New("Server is already serving connections")
 
 // ServeConn serves HTTP requests from the given connection
 // using the given handler.
@@ -166,20 +165,20 @@ type Server struct {
 	//   * ErrBrokenChunks
 	ErrorHandler func(ctx *RequestCtx, err error)
 
-	// HeaderReceived is called after receiving the header
+	// HeaderReceived is called after receiving the header.
 	//
-	// non zero RequestConfig field values will overwrite the default configs
+	// Non zero RequestConfig field values will overwrite the default configs
 	HeaderReceived func(header *RequestHeader) RequestConfig
 
-	// ContinueHandler is called after receiving the Expect 100 Continue Header
+	// ContinueHandler is called after receiving the Expect 100 Continue Header.
 	//
 	// https://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.2.3
 	// https://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html#sec10.1.1
 	// Using ContinueHandler a server can make decisioning on whether or not
-	// to read a potentially large request body based on the headers
+	// to read a potentially large request body based on the headers.
 	//
 	// The default is to automatically read request bodies of Expect 100 Continue requests
-	// like they are normal requests
+	// like they are normal requests.
 	ContinueHandler func(header *RequestHeader) bool
 
 	// Server name for sending in response headers.
@@ -405,7 +404,7 @@ type Server struct {
 	// instead.
 	TLSConfig *tls.Config
 
-	// FormValueFunc, which is used by RequestCtx.FormValue and support for customising
+	// FormValueFunc, which is used by RequestCtx.FormValue and support for customizing
 	// the behaviour of the RequestCtx.FormValue function.
 	//
 	// NetHttpFormValueFunc gives a FormValueFunc func implementation that is consistent with net/http.
@@ -432,6 +431,8 @@ type Server struct {
 	open int32
 	stop int32
 	done chan struct{}
+
+	rejectedRequestsCount uint32
 }
 
 // TimeoutHandler creates RequestHandler, which returns StatusRequestTimeout
@@ -486,18 +487,18 @@ func TimeoutWithCodeHandler(h RequestHandler, timeout time.Duration, msg string,
 	}
 }
 
-// RequestConfig configure the per request deadline and body limits
+// RequestConfig configure the per request deadline and body limits.
 type RequestConfig struct {
 	// ReadTimeout is the maximum duration for reading the entire
 	// request body.
-	// a zero value means that default values will be honored
+	// A zero value means that default values will be honored.
 	ReadTimeout time.Duration
 	// WriteTimeout is the maximum duration before timing out
 	// writes of the response.
-	// a zero value means that default values will be honored
+	// A zero value means that default values will be honored.
 	WriteTimeout time.Duration
 	// Maximum request body size.
-	// a zero value means that default values will be honored
+	// A zero value means that default values will be honored.
 	MaxRequestBodySize int
 }
 
@@ -551,11 +552,12 @@ func CompressHandlerLevel(h RequestHandler, level int) RequestHandler {
 func CompressHandlerBrotliLevel(h RequestHandler, brotliLevel, otherLevel int) RequestHandler {
 	return func(ctx *RequestCtx) {
 		h(ctx)
-		if ctx.Request.Header.HasAcceptEncodingBytes(strBr) {
+		switch {
+		case ctx.Request.Header.HasAcceptEncodingBytes(strBr):
 			ctx.Response.brotliBody(brotliLevel) //nolint:errcheck
-		} else if ctx.Request.Header.HasAcceptEncodingBytes(strGzip) {
+		case ctx.Request.Header.HasAcceptEncodingBytes(strGzip):
 			ctx.Response.gzipBody(otherLevel) //nolint:errcheck
-		} else if ctx.Request.Header.HasAcceptEncodingBytes(strDeflate) {
+		case ctx.Request.Header.HasAcceptEncodingBytes(strDeflate):
 			ctx.Response.deflateBody(otherLevel) //nolint:errcheck
 		}
 	}
@@ -675,7 +677,7 @@ func (ctx *RequestCtx) Hijacked() bool {
 // All the values are removed from ctx after returning from the top
 // RequestHandler. Additionally, Close method is called on each value
 // implementing io.Closer before removing the value from ctx.
-func (ctx *RequestCtx) SetUserValue(key interface{}, value interface{}) {
+func (ctx *RequestCtx) SetUserValue(key any, value any) {
 	ctx.userValues.Set(key, value)
 }
 
@@ -688,18 +690,18 @@ func (ctx *RequestCtx) SetUserValue(key interface{}, value interface{}) {
 // functions involved in request processing.
 //
 // All the values stored in ctx are deleted after returning from RequestHandler.
-func (ctx *RequestCtx) SetUserValueBytes(key []byte, value interface{}) {
+func (ctx *RequestCtx) SetUserValueBytes(key []byte, value any) {
 	ctx.userValues.SetBytes(key, value)
 }
 
 // UserValue returns the value stored via SetUserValue* under the given key.
-func (ctx *RequestCtx) UserValue(key interface{}) interface{} {
+func (ctx *RequestCtx) UserValue(key any) any {
 	return ctx.userValues.Get(key)
 }
 
 // UserValueBytes returns the value stored via SetUserValue*
 // under the given key.
-func (ctx *RequestCtx) UserValueBytes(key []byte) interface{} {
+func (ctx *RequestCtx) UserValueBytes(key []byte) any {
 	return ctx.userValues.GetBytes(key)
 }
 
@@ -707,7 +709,7 @@ func (ctx *RequestCtx) UserValueBytes(key []byte) interface{} {
 //
 // visitor must not retain references to key and value after returning.
 // Make key and/or value copies if you need storing them after returning.
-func (ctx *RequestCtx) VisitUserValues(visitor func([]byte, interface{})) {
+func (ctx *RequestCtx) VisitUserValues(visitor func([]byte, any)) {
 	for i, n := 0, len(ctx.userValues); i < n; i++ {
 		kv := &ctx.userValues[i]
 		if _, ok := kv.key.(string); ok {
@@ -720,20 +722,20 @@ func (ctx *RequestCtx) VisitUserValues(visitor func([]byte, interface{})) {
 //
 // visitor must not retain references to key and value after returning.
 // Make key and/or value copies if you need storing them after returning.
-func (ctx *RequestCtx) VisitUserValuesAll(visitor func(interface{}, interface{})) {
+func (ctx *RequestCtx) VisitUserValuesAll(visitor func(any, any)) {
 	for i, n := 0, len(ctx.userValues); i < n; i++ {
 		kv := &ctx.userValues[i]
 		visitor(kv.key, kv.value)
 	}
 }
 
-// ResetUserValues allows to reset user values from Request Context
+// ResetUserValues allows to reset user values from Request Context.
 func (ctx *RequestCtx) ResetUserValues() {
 	ctx.userValues.Reset()
 }
 
 // RemoveUserValue removes the given key and the value under it in ctx.
-func (ctx *RequestCtx) RemoveUserValue(key interface{}) {
+func (ctx *RequestCtx) RemoveUserValue(key any) {
 	ctx.userValues.Remove(key)
 }
 
@@ -855,7 +857,7 @@ func (r *firstByteReader) Read(b []byte) (int, error) {
 // Logger is used for logging formatted messages.
 type Logger interface {
 	// Printf must have the same semantics as log.Printf.
-	Printf(format string, args ...interface{})
+	Printf(format string, args ...any)
 }
 
 var ctxLoggerLock sync.Mutex
@@ -865,7 +867,7 @@ type ctxLogger struct {
 	logger Logger
 }
 
-func (cl *ctxLogger) Printf(format string, args ...interface{}) {
+func (cl *ctxLogger) Printf(format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	ctxLoggerLock.Lock()
 	cl.logger.Printf("%.3f %s - %s", time.Since(cl.ctx.ConnTime()).Seconds(), cl.ctx.String(), msg)
@@ -880,7 +882,8 @@ var zeroTCPAddr = &net.TCPAddr{
 //
 // The returned value may be useful for logging.
 func (ctx *RequestCtx) String() string {
-	return fmt.Sprintf("#%016X - %s<->%s - %s %s", ctx.ID(), ctx.LocalAddr(), ctx.RemoteAddr(), ctx.Request.Header.Method(), ctx.URI().FullURI())
+	return fmt.Sprintf("#%016X - %s<->%s - %s %s", ctx.ID(), ctx.LocalAddr(), ctx.RemoteAddr(),
+		ctx.Request.Header.Method(), ctx.URI().FullURI())
 }
 
 // ID returns unique ID of the request.
@@ -1141,7 +1144,10 @@ var (
 		return nil
 	}
 
-	// NetHttpFormValueFunc gives consistent behavior with net/http. POST and PUT body parameters take precedence over URL query string values.
+	// NetHttpFormValueFunc gives consistent behavior with net/http.
+	// POST and PUT body parameters take precedence over URL query string values.
+	//
+	//nolint:stylecheck // backwards compatibility
 	NetHttpFormValueFunc = func(ctx *RequestCtx, key string) []byte {
 		v := ctx.PostArgs().Peek(key)
 		if len(v) > 0 {
@@ -1679,14 +1685,13 @@ func (s *Server) ListenAndServeTLSEmbed(addr string, certData, keyData []byte) e
 // the function will use previously added TLS configuration.
 func (s *Server) ServeTLS(ln net.Listener, certFile, keyFile string) error {
 	s.mu.Lock()
-	err := s.AppendCert(certFile, keyFile)
-	if err != nil && err != errNoCertOrKeyProvided {
-		s.mu.Unlock()
-		return err
-	}
-	if s.TLSConfig == nil {
-		s.mu.Unlock()
-		return errNoCertOrKeyProvided
+	s.configTLS()
+	configHasCert := len(s.TLSConfig.Certificates) > 0 || s.TLSConfig.GetCertificate != nil
+	if !configHasCert || certFile != "" || keyFile != "" {
+		if err := s.AppendCert(certFile, keyFile); err != nil {
+			s.mu.Unlock()
+			return err
+		}
 	}
 
 	// BuildNameToCertificate has been deprecated since 1.14.
@@ -1708,15 +1713,13 @@ func (s *Server) ServeTLS(ln net.Listener, certFile, keyFile string) error {
 // the function will use previously added TLS configuration.
 func (s *Server) ServeTLSEmbed(ln net.Listener, certData, keyData []byte) error {
 	s.mu.Lock()
-
-	err := s.AppendCertEmbed(certData, keyData)
-	if err != nil && err != errNoCertOrKeyProvided {
-		s.mu.Unlock()
-		return err
-	}
-	if s.TLSConfig == nil {
-		s.mu.Unlock()
-		return errNoCertOrKeyProvided
+	s.configTLS()
+	configHasCert := len(s.TLSConfig.Certificates) > 0 || s.TLSConfig.GetCertificate != nil
+	if !configHasCert || len(certData) != 0 || len(keyData) != 0 {
+		if err := s.AppendCertEmbed(certData, keyData); err != nil {
+			s.mu.Unlock()
+			return err
+		}
 	}
 
 	// BuildNameToCertificate has been deprecated since 1.14.
@@ -1733,9 +1736,9 @@ func (s *Server) ServeTLSEmbed(ln net.Listener, certData, keyData []byte) error 
 // AppendCert appends certificate and keyfile to TLS Configuration.
 //
 // This function allows programmer to handle multiple domains
-// in one server structure. See examples/multidomain
+// in one server structure. See examples/multidomain.
 func (s *Server) AppendCert(certFile, keyFile string) error {
-	if len(certFile) == 0 && len(keyFile) == 0 {
+	if certFile == "" && keyFile == "" {
 		return errNoCertOrKeyProvided
 	}
 
@@ -1784,21 +1787,16 @@ const DefaultConcurrency = 256 * 1024
 func (s *Server) Serve(ln net.Listener) error {
 	var lastOverflowErrorTime time.Time
 	var lastPerIPErrorTime time.Time
-	var c net.Conn
-	var err error
 
 	maxWorkersCount := s.getConcurrency()
 
 	s.mu.Lock()
-	{
-		s.ln = append(s.ln, ln)
-		if s.done == nil {
-			s.done = make(chan struct{})
-		}
-
-		if s.concurrencyCh == nil {
-			s.concurrencyCh = make(chan struct{}, maxWorkersCount)
-		}
+	s.ln = append(s.ln, ln)
+	if s.done == nil {
+		s.done = make(chan struct{})
+	}
+	if s.concurrencyCh == nil {
+		s.concurrencyCh = make(chan struct{}, maxWorkersCount)
 	}
 	s.mu.Unlock()
 
@@ -1820,7 +1818,8 @@ func (s *Server) Serve(ln net.Listener) error {
 	defer atomic.AddInt32(&s.open, -1)
 
 	for {
-		if c, err = acceptConn(s, ln, &lastPerIPErrorTime); err != nil {
+		c, err := acceptConn(s, ln, &lastPerIPErrorTime)
+		if err != nil {
 			wp.Stop()
 			if err == io.EOF {
 				return nil
@@ -1831,6 +1830,7 @@ func (s *Server) Serve(ln net.Listener) error {
 		atomic.AddInt32(&s.open, 1)
 		if !wp.Serve(c) {
 			atomic.AddInt32(&s.open, -1)
+			atomic.AddUint32(&s.rejectedRequestsCount, 1)
 			s.writeFastError(c, StatusServiceUnavailable,
 				"The connection cannot be served because Server.Concurrency limit exceeded")
 			c.Close()
@@ -1853,12 +1853,12 @@ func (s *Server) Serve(ln net.Listener) error {
 				time.Sleep(s.SleepWhenConcurrencyLimitsExceeded)
 			}
 		}
-		c = nil
 	}
 }
 
 // Shutdown gracefully shuts down the server without interrupting any active connections.
-// Shutdown works by first closing all open listeners and then waiting indefinitely for all connections to return to idle and then shut down.
+// Shutdown works by first closing all open listeners and then waiting indefinitely for all connections
+// to return to idle and then shut down.
 //
 // When Shutdown is called, Serve, ListenAndServe, and ListenAndServeTLS immediately return nil.
 // Make sure the program doesn't exit and waits instead for Shutdown to return.
@@ -1869,12 +1869,14 @@ func (s *Server) Shutdown() error {
 }
 
 // ShutdownWithContext gracefully shuts down the server without interrupting any active connections.
-// ShutdownWithContext works by first closing all open listeners and then waiting for all connections to return to idle or context timeout and then shut down.
+// ShutdownWithContext works by first closing all open listeners and then waiting for all connections to return to idle
+// or context timeout and then shut down.
 //
 // When ShutdownWithContext is called, Serve, ListenAndServe, and ListenAndServeTLS immediately return nil.
 // Make sure the program doesn't exit and waits instead for Shutdown to return.
 //
-// ShutdownWithContext does not close keepalive connections so it's recommended to set ReadTimeout and IdleTimeout to something else than 0.
+// ShutdownWithContext does not close keepalive connections so it's recommended to set ReadTimeout and IdleTimeout
+// to something else than 0.
 func (s *Server) ShutdownWithContext(ctx context.Context) (err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -1929,9 +1931,6 @@ func acceptConn(s *Server, ln net.Listener, lastPerIPErrorTime *time.Time) (net.
 	for {
 		c, err := ln.Accept()
 		if err != nil {
-			if c != nil {
-				panic("BUG: net.Listener returned non-nil conn and non-nil error")
-			}
 			if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 				s.logger().Printf("Timeout error when accepting new connections: %v", netErr)
 				time.Sleep(time.Second)
@@ -1942,9 +1941,6 @@ func acceptConn(s *Server, ln net.Listener, lastPerIPErrorTime *time.Time) (net.
 				return nil, err
 			}
 			return nil, io.EOF
-		}
-		if c == nil {
-			panic("BUG: net.Listener returned (nil, nil)")
 		}
 
 		if tc, ok := c.(*net.TCPConn); ok && s.TCPKeepalive {
@@ -2060,14 +2056,14 @@ var errHijacked = errors.New("connection has been hijacked")
 // GetCurrentConcurrency returns a number of currently served
 // connections.
 //
-// This function is intended be used by monitoring systems
+// This function is intended be used by monitoring systems.
 func (s *Server) GetCurrentConcurrency() uint32 {
 	return atomic.LoadUint32(&s.concurrency)
 }
 
 // GetOpenConnectionsCount returns a number of opened connections.
 //
-// This function is intended be used by monitoring systems
+// This function is intended be used by monitoring systems.
 func (s *Server) GetOpenConnectionsCount() int32 {
 	if atomic.LoadInt32(&s.stop) == 0 {
 		// Decrement by one to avoid reporting the extra open value that gets
@@ -2078,6 +2074,13 @@ func (s *Server) GetOpenConnectionsCount() int32 {
 	// before we load the value of s.open. However, in the common case
 	// this avoids underreporting open connections by 1 during server shutdown.
 	return atomic.LoadInt32(&s.open)
+}
+
+// GetRejectedConnectionsCount returns a number of rejected connections.
+//
+// This function is intended be used by monitoring systems.
+func (s *Server) GetRejectedConnectionsCount() uint32 {
+	return atomic.LoadUint32(&s.rejectedRequestsCount)
 }
 
 func (s *Server) getConcurrency() int {
@@ -2252,11 +2255,12 @@ func (s *Server) serveConn(c net.Conn) (err error) {
 							panic(fmt.Sprintf("BUG: error in SetReadDeadline(%v): %v", deadline, err))
 						}
 					}
-					if reqConf.MaxRequestBodySize > 0 {
+					switch {
+					case reqConf.MaxRequestBodySize > 0:
 						maxRequestBodySize = reqConf.MaxRequestBodySize
-					} else if s.MaxRequestBodySize > 0 {
+					case s.MaxRequestBodySize > 0:
 						maxRequestBodySize = s.MaxRequestBodySize
-					} else {
+					default:
 						maxRequestBodySize = DefaultMaxRequestBodySize
 					}
 					if reqConf.WriteTimeout > 0 {
@@ -2304,7 +2308,6 @@ func (s *Server) serveConn(c net.Conn) (err error) {
 		// 'Expect: 100-continue' request handling.
 		// See https://www.w3.org/Protocols/rfc2616/rfc2616-sec8.html#sec8.2.3 for details.
 		if ctx.Request.MayContinue() {
-
 			// Allow the ability to deny reading the incoming request body
 			if s.ContinueHandler != nil {
 				if continueReadingRequest = s.ContinueHandler(&ctx.Request.Header); !continueReadingRequest {
@@ -2430,7 +2433,7 @@ func (s *Server) serveConn(c net.Conn) (err error) {
 			// This benchmark will send 16 pipelined requests. It is faster to pack as many responses
 			// in a TCP packet and send it back at once than waiting for a flush every request.
 			// In real world circumstances this behaviour could be argued as being wrong.
-			if br == nil || br.Buffered() == 0 || connectionClose {
+			if br == nil || br.Buffered() == 0 || connectionClose || (s.ReduceMemoryUsage && hijackHandler == nil) {
 				err = bw.Flush()
 				if err != nil {
 					break
@@ -2563,9 +2566,7 @@ func (c *hijackConn) Close() error {
 		return nil
 	}
 
-	conn := c.Conn
-	c.s.releaseHijackConn(c)
-	return conn.Close()
+	return c.Conn.Close()
 }
 
 // LastTimeoutErrorResponse returns the last timeout response set
@@ -2578,7 +2579,7 @@ func (ctx *RequestCtx) LastTimeoutErrorResponse() *Response {
 
 func writeResponse(ctx *RequestCtx, w *bufio.Writer) error {
 	if ctx.timeoutResponse != nil {
-		panic("BUG: cannot write timed out response")
+		return errors.New("cannot write timed out response")
 	}
 	err := ctx.Response.Write(w)
 
@@ -2596,8 +2597,8 @@ func acquireByteReader(ctxP **RequestCtx) (*bufio.Reader, error) {
 	c := ctx.c
 	s.releaseCtx(ctx)
 
-	// Make GC happy, so it could garbage collect ctx
-	// while we waiting for the next request.
+	//nolint:wastedassign // Make GC happy, so it could garbage collect ctx while we wait for the
+	// next request.
 	ctx = nil
 	*ctxP = nil
 
@@ -2612,6 +2613,7 @@ func acquireByteReader(ctxP **RequestCtx) (*bufio.Reader, error) {
 		return nil, io.EOF
 	}
 	if n != 1 {
+		// developer sanity-check
 		panic("BUG: Reader must return at least one byte")
 	}
 
@@ -2734,7 +2736,7 @@ func (ctx *RequestCtx) Deadline() (deadline time.Time, ok bool) {
 // never be canceled. Successive calls to Done return the same value.
 //
 // Note: Because creating a new channel for every request is just too expensive, so
-// RequestCtx.s.done is only closed when the server is shutting down
+// RequestCtx.s.done is only closed when the server is shutting down.
 func (ctx *RequestCtx) Done() <-chan struct{} {
 	return ctx.s.done
 }
@@ -2747,7 +2749,7 @@ func (ctx *RequestCtx) Done() <-chan struct{} {
 // or DeadlineExceeded if the context's deadline passed.
 //
 // Note: Because creating a new channel for every request is just too expensive, so
-// RequestCtx.s.done is only closed when the server is shutting down
+// RequestCtx.s.done is only closed when the server is shutting down.
 func (ctx *RequestCtx) Err() error {
 	select {
 	case <-ctx.s.done:
@@ -2762,8 +2764,8 @@ func (ctx *RequestCtx) Err() error {
 // the same key returns the same result.
 //
 // This method is present to make RequestCtx implement the context interface.
-// This method is the same as calling ctx.UserValue(key)
-func (ctx *RequestCtx) Value(key interface{}) interface{} {
+// This method is the same as calling ctx.UserValue(key).
+func (ctx *RequestCtx) Value(key any) any {
 	return ctx.UserValue(key)
 }
 
@@ -2787,19 +2789,23 @@ func (fa *fakeAddrer) LocalAddr() net.Addr {
 }
 
 func (fa *fakeAddrer) Read(p []byte) (int, error) {
+	// developer sanity-check
 	panic("BUG: unexpected Read call")
 }
 
 func (fa *fakeAddrer) Write(p []byte) (int, error) {
+	// developer sanity-check
 	panic("BUG: unexpected Write call")
 }
 
 func (fa *fakeAddrer) Close() error {
+	// developer sanity-check
 	panic("BUG: unexpected Close call")
 }
 
 func (s *Server) releaseCtx(ctx *RequestCtx) {
 	if ctx.timeoutResponse != nil {
+		// developer sanity-check
 		panic("BUG: cannot release timed out RequestCtx")
 	}
 
@@ -2886,7 +2892,8 @@ func (s *Server) trackConn(c net.Conn, state ConnState) {
 			s.idleConns = make(map[net.Conn]time.Time)
 		}
 		// Count the connection as Idle after 5 seconds.
-		// Same as net/http.Server: https://github.com/golang/go/blob/85d7bab91d9a3ed1f76842e4328973ea75efef54/src/net/http/server.go#L2834-L2836
+		// Same as net/http.Server:
+		// https://github.com/golang/go/blob/85d7bab91d9a3ed1f76842e4328973ea75efef54/src/net/http/server.go#L2834-L2836
 		s.idleConns[c] = time.Now().Add(time.Second * 5)
 
 	default:

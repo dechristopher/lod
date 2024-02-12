@@ -132,16 +132,23 @@ func WriteBrotliLevel(w io.Writer, p []byte, level int) (int, error) {
 	}
 }
 
-var stacklessWriteBrotli = stackless.NewFunc(nonblockingWriteBrotli)
+var (
+	stacklessWriteBrotliOnce sync.Once
+	stacklessWriteBrotliFunc func(ctx any) bool
+)
 
-func nonblockingWriteBrotli(ctxv interface{}) {
+func stacklessWriteBrotli(ctx any) {
+	stacklessWriteBrotliOnce.Do(func() {
+		stacklessWriteBrotliFunc = stackless.NewFunc(nonblockingWriteBrotli)
+	})
+	stacklessWriteBrotliFunc(ctx)
+}
+
+func nonblockingWriteBrotli(ctxv any) {
 	ctx := ctxv.(*compressCtx)
 	zw := acquireRealBrotliWriter(ctx.w, ctx.level)
 
-	_, err := zw.Write(ctx.p)
-	if err != nil {
-		panic(fmt.Sprintf("BUG: brotli.Writer.Write for len(p)=%d returned unexpected error: %v", len(ctx.p), err))
-	}
+	zw.Write(ctx.p) //nolint:errcheck // no way to handle this error anyway
 
 	releaseRealBrotliWriter(zw, ctx.level)
 }

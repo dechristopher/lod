@@ -218,8 +218,7 @@ var (
 	errConnectionClosed = errors.New("connection closed")
 )
 
-type timeoutError struct {
-}
+type timeoutError struct{}
 
 func (e *timeoutError) Error() string {
 	return "timeout"
@@ -233,10 +232,8 @@ func (e *timeoutError) Timeout() bool {
 	return true
 }
 
-var (
-	// ErrTimeout is returned from Read() or Write() on timeout.
-	ErrTimeout = &timeoutError{}
-)
+// ErrTimeout is returned from Read() or Write() on timeout.
+var ErrTimeout = &timeoutError{}
 
 func (c *pipeConn) Close() error {
 	return c.pc.Close()
@@ -338,7 +335,7 @@ func releaseByteBuffer(b *byteBuffer) {
 }
 
 var byteBufferPool = &sync.Pool{
-	New: func() interface{} {
+	New: func() any {
 		return &byteBuffer{
 			b: make([]byte, 1024),
 		}
