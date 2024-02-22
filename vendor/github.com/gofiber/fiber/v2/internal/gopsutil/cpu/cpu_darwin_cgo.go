@@ -1,5 +1,4 @@
 //go:build darwin && cgo
-// +build darwin,cgo
 
 package cpu
 
@@ -108,5 +107,4 @@ func allCPUTimes() ([]TimesStat, error) {
 	}
 
 	return []TimesStat{c}, nil
-
 }

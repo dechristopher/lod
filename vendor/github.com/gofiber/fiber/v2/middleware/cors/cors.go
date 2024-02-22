@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 )
 
 // Config defines the config for middleware.
@@ -14,7 +15,15 @@ type Config struct {
 	// Optional. Default: nil
 	Next func(c *fiber.Ctx) bool
 
-	// AllowOrigin defines a list of origins that may access the resource.
+	// AllowOriginsFunc defines a function that will set the 'access-control-allow-origin'
+	// response header to the 'origin' request header when returned true. This allows for
+	// dynamic evaluation of allowed origins. Note if AllowCredentials is true, wildcard origins
+	// will be not have the 'access-control-allow-credentials' header set to 'true'.
+	//
+	// Optional. Default: nil
+	AllowOriginsFunc func(origin string) bool
+
+	// AllowOrigin defines a comma separated list of origins that may access the resource.
 	//
 	// Optional. Default value "*"
 	AllowOrigins string
@@ -34,7 +43,8 @@ type Config struct {
 	// AllowCredentials indicates whether or not the response to the request
 	// can be exposed when the credentials flag is true. When used as part of
 	// a response to a preflight request, this indicates whether or not the
-	// actual request can be made using credentials.
+	// actual request can be made using credentials. Note: If true, AllowOrigins
+	// cannot be set to a wildcard ("*") to prevent security vulnerabilities.
 	//
 	// Optional. Default value false.
 	AllowCredentials bool
@@ -47,6 +57,9 @@ type Config struct {
 
 	// MaxAge indicates how long (in seconds) the results of a preflight request
 	// can be cached.
+	// If you pass MaxAge 0, Access-Control-Max-Age header will not be added and
+	// browser will use 5 seconds by default.
+	// To disable caching completely, pass MaxAge value negative. It will set the Access-Control-Max-Age header 0.
 	//
 	// Optional. Default value 0.
 	MaxAge int
@@ -54,8 +67,9 @@ type Config struct {
 
 // ConfigDefault is the default config
 var ConfigDefault = Config{
-	Next:         nil,
-	AllowOrigins: "*",
+	Next:             nil,
+	AllowOriginsFunc: nil,
+	AllowOrigins:     "*",
 	AllowMethods: strings.Join([]string{
 		fiber.MethodGet,
 		fiber.MethodPost,
@@ -83,9 +97,35 @@ func New(config ...Config) fiber.Handler {
 		if cfg.AllowMethods == "" {
 			cfg.AllowMethods = ConfigDefault.AllowMethods
 		}
-		if cfg.AllowOrigins == "" {
+		// When none of the AllowOrigins or AllowOriginsFunc config was defined, set the default AllowOrigins value with "*"
+		if cfg.AllowOrigins == "" && cfg.AllowOriginsFunc == nil {
 			cfg.AllowOrigins = ConfigDefault.AllowOrigins
 		}
+	}
+
+	// Warning logs if both AllowOrigins and AllowOriginsFunc are set
+	if cfg.AllowOrigins != "" && cfg.AllowOriginsFunc != nil {
+		log.Warn("[CORS] Both 'AllowOrigins' and 'AllowOriginsFunc' have been defined.")
+	}
+
+	// Validate CORS credentials configuration
+	if cfg.AllowCredentials && cfg.AllowOrigins == "*" {
+		panic("[CORS] Insecure setup, 'AllowCredentials' is set to true, and 'AllowOrigins' is set to a wildcard.")
+	}
+
+	// Validate and normalize static AllowOrigins if not using AllowOriginsFunc
+	if cfg.AllowOriginsFunc == nil && cfg.AllowOrigins != "" && cfg.AllowOrigins != "*" {
+		validatedOrigins := []string{}
+		for _, origin := range strings.Split(cfg.AllowOrigins, ",") {
+			isValid, normalizedOrigin := normalizeOrigin(origin)
+			if isValid {
+				validatedOrigins = append(validatedOrigins, normalizedOrigin)
+			} else {
+				log.Warnf("[CORS] Invalid origin format in configuration: %s", origin)
+				panic("[CORS] Invalid origin provided in configuration")
+			}
+		}
+		cfg.AllowOrigins = strings.Join(validatedOrigins, ",")
 	}
 
 	// Convert string to slice
@@ -106,23 +146,28 @@ func New(config ...Config) fiber.Handler {
 			return c.Next()
 		}
 
-		// Get origin header
-		origin := c.Get(fiber.HeaderOrigin)
+		// Get originHeader header
+		originHeader := c.Get(fiber.HeaderOrigin)
 		allowOrigin := ""
 
 		// Check allowed origins
-		for _, o := range allowOrigins {
-			if o == "*" {
+		for _, origin := range allowOrigins {
+			if origin == "*" {
 				allowOrigin = "*"
 				break
 			}
-			if o == origin {
-				allowOrigin = o
+			if validateDomain(originHeader, origin) {
+				allowOrigin = originHeader
 				break
 			}
-			if matchSubdomain(origin, o) {
-				allowOrigin = origin
-				break
+		}
+
+		// Run AllowOriginsFunc if the logic for
+		// handling the value in 'AllowOrigins' does
+		// not result in allowOrigin being set.
+		if allowOrigin == "" && cfg.AllowOriginsFunc != nil {
+			if cfg.AllowOriginsFunc(originHeader) {
+				allowOrigin = originHeader
 			}
 		}
 
@@ -147,9 +192,17 @@ func New(config ...Config) fiber.Handler {
 		c.Set(fiber.HeaderAccessControlAllowOrigin, allowOrigin)
 		c.Set(fiber.HeaderAccessControlAllowMethods, allowMethods)
 
-		// Set Allow-Credentials if set to true
 		if cfg.AllowCredentials {
-			c.Set(fiber.HeaderAccessControlAllowCredentials, "true")
+			// When AllowCredentials is true, set the Access-Control-Allow-Origin to the specific origin instead of '*'
+			if allowOrigin != "*" && allowOrigin != "" {
+				c.Set(fiber.HeaderAccessControlAllowOrigin, allowOrigin)
+				c.Set(fiber.HeaderAccessControlAllowCredentials, "true")
+			} else if allowOrigin == "*" {
+				log.Warn("[CORS] 'AllowCredentials' is true, but 'AllowOrigins' cannot be set to '*'.")
+			}
+		} else {
+			// For non-credential requests, it's safe to set to '*' or specific origins
+			c.Set(fiber.HeaderAccessControlAllowOrigin, allowOrigin)
 		}
 
 		// Set Allow-Headers if not empty
@@ -165,6 +218,8 @@ func New(config ...Config) fiber.Handler {
 		// Set MaxAge is set
 		if cfg.MaxAge > 0 {
 			c.Set(fiber.HeaderAccessControlMaxAge, maxAge)
+		} else if cfg.MaxAge < 0 {
+			c.Set(fiber.HeaderAccessControlMaxAge, "0")
 		}
 
 		// Send 204 No Content
