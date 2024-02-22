@@ -67,6 +67,7 @@ func New(config ...Config) fiber.Handler {
 			cfg.Output = colorable.NewNonColorable(os.Stdout)
 		}
 	}
+
 	errPadding := 15
 	errPaddingStr := strconv.Itoa(errPadding)
 
@@ -83,9 +84,6 @@ func New(config ...Config) fiber.Handler {
 		if cfg.Next != nil && cfg.Next(c) {
 			return c.Next()
 		}
-
-		// Alias colors
-		colors := c.App().Config().ColorScheme
 
 		// Set error handler once
 		once.Do(func() {
@@ -136,41 +134,7 @@ func New(config ...Config) fiber.Handler {
 		// Get new buffer
 		buf := bytebufferpool.Get()
 
-		// Default output when no custom Format or io.Writer is given
-		if cfg.enableColors && cfg.Format == ConfigDefault.Format {
-			// Format error if exist
-			formatErr := ""
-			if chainErr != nil {
-				formatErr = colors.Red + " | " + chainErr.Error() + colors.Reset
-			}
-
-			// Format log to buffer
-			_, _ = buf.WriteString( //nolint:errcheck // This will never fail
-				fmt.Sprintf("%s |%s %3d %s| %7v | %15s |%s %-7s %s| %-"+errPaddingStr+"s %s\n",
-					timestamp.Load().(string),
-					statusColor(c.Response().StatusCode(), colors), c.Response().StatusCode(), colors.Reset,
-					data.Stop.Sub(data.Start).Round(time.Millisecond),
-					c.IP(),
-					methodColor(c.Method(), colors), c.Method(), colors.Reset,
-					c.Path(),
-					formatErr,
-				),
-			)
-
-			// Write buffer to output
-			_, _ = cfg.Output.Write(buf.Bytes()) //nolint:errcheck // This will never fail
-
-			if cfg.Done != nil {
-				cfg.Done(c, buf.Bytes())
-			}
-
-			// Put buffer back to pool
-			bytebufferpool.Put(buf)
-
-			// End chain
-			return nil
-		}
-
+		var err error
 		// Loop over template parts execute dynamic parts and add fixed parts to the buffer
 		for i, logFunc := range logFunChain {
 			if logFunc == nil {

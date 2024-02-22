@@ -1,11 +1,12 @@
 //go:build linux || freebsd || openbsd || darwin
-// +build linux freebsd openbsd darwin
 
 package process
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -13,8 +14,9 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/gofiber/fiber/v2/internal/gopsutil/common"
 	"golang.org/x/sys/unix"
+
+	"github.com/gofiber/fiber/v2/internal/gopsutil/common"
 )
 
 // POSIX
@@ -81,12 +83,12 @@ func PidExistsWithContext(ctx context.Context, pid int32) (bool, error) {
 		return false, err
 	}
 
-	if _, err := os.Stat(common.HostProc()); err == nil { //Means that proc filesystem exist
+	if _, err := os.Stat(common.HostProc()); err == nil { // Means that proc filesystem exist
 		// Checking PID existence based on existence of /<HOST_PROC>/proc/<PID> folder
 		// This covers the case when running inside container with a different process namespace (by default)
 
 		_, err := os.Stat(common.HostProc(strconv.Itoa(int(pid))))
-		if os.IsNotExist(err) {
+		if errors.Is(err, fs.ErrNotExist) {
 			return false, nil
 		}
 		return err == nil, err
