@@ -19,6 +19,14 @@ func (s *CoordSeq) Clone() *CoordSeq {
 	return s.context.newNonNilCoordSeq(C.GEOSCoordSeq_clone_r(s.context.handle, s.s))
 }
 
+// Destroy destroys s and all resources associated with s.
+func (s *CoordSeq) Destroy() {
+	s.context.Lock()
+	defer s.context.Unlock()
+	C.GEOSCoordSeq_destroy_r(s.context.handle, s.s)
+	*s = CoordSeq{} // Clear all references.
+}
+
 // Dimensions returns the dimensions of s.
 func (s *CoordSeq) Dimensions() int {
 	return s.dimensions
@@ -141,7 +149,7 @@ func (s *CoordSeq) ToCoords() [][]float64 {
 	coords := make([][]float64, s.size)
 	j := 0
 	for i := 0; i < s.size; i++ {
-		coords[i] = flatCoords[j : j+s.dimensions]
+		coords[i] = flatCoords[j : j+s.dimensions : j+s.dimensions]
 		j += s.dimensions
 	}
 	return coords
@@ -196,11 +204,4 @@ func (s *CoordSeq) Z(idx int) float64 {
 		panic(s.context.err)
 	}
 	return val
-}
-
-func (s *CoordSeq) destroy() {
-	s.context.Lock()
-	defer s.context.Unlock()
-	C.GEOSCoordSeq_destroy_r(s.context.handle, s.s)
-	*s = CoordSeq{} // Clear all references.
 }

@@ -26,6 +26,10 @@ GEOSGeometry *c_newGEOSGeomFromBounds_r(GEOSContextHandle_t handle, int *typeID,
 int c_GEOSSTRtree_distance_callback(const void *item1, const void *item2,
                                     double *distance, void *userdata);
 void c_GEOSSTRtree_query_callback(void *elem, void *userdata);
+GEOSGeometry *c_GEOSMakeValidWithParams_r(GEOSContextHandle_t handle,
+                                          const GEOSGeometry *g,
+                                          enum GEOSMakeValidMethods method,
+                                          int keepCollapsed);
 
 #if GEOS_VERSION_MAJOR < 3 ||                                                  \
     (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 11)
@@ -33,6 +37,15 @@ void c_GEOSSTRtree_query_callback(void *elem, void *userdata);
 GEOSGeometry *GEOSConcaveHull_r(GEOSContextHandle_t handle,
                                 const GEOSGeometry *g, double ratio,
                                 unsigned int allowHoles);
+
+#endif
+
+#if GEOS_VERSION_MAJOR < 3 ||                                                  \
+    (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 12)
+
+GEOSGeometry *GEOSConcaveHullByLength_r(GEOSContextHandle_t handle,
+                                        const GEOSGeometry *g, double ratio,
+                                        unsigned int allowHoles);
 
 #endif
 

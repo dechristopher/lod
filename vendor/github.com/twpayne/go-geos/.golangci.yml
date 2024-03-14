@@ -7,7 +7,6 @@ linters:
   - containedctx
   - contextcheck
   - decorder
-  - depguard
   - dogsled
   - dupword
   - durationcheck
@@ -21,41 +20,57 @@ linters:
   - forbidigo
   - forcetypeassert
   - gci
+  - ginkgolinter
   - gocheckcompilerdirectives
   - gochecknoinits
-  - goconst
+  - gochecksumtype
   - gocritic
   - godot
   - goerr113
   - gofmt
   - gofumpt
   - goimports
+  - gomoddirectives
   - gomodguard
   - goprintffuncname
   - gosec
   - gosimple
+  - gosmopolitan
   - govet
   - grouper
   - importas
+  - inamedparam
   - ineffassign
   - interfacebloat
   - ireturn
   - loggercheck
+  - makezero
+  - mirror
   - misspell
+  - musttag
   - nakedret
   - nilerr
+  - nilnil
   - noctx
   - nolintlint
   - nosprintfhostport
+  - perfsprint
   - prealloc
   - predeclared
   - promlinter
+  - protogetter
   - reassign
+  - revive
+  - rowserrcheck
+  - sloglint
+  - sqlclosecheck
   - staticcheck
   - stylecheck
+  - tagalign
   - tagliatelle
   - tenv
   - testableexamples
+  - testifylint
   - testpackage
   - thelper
   - typecheck
@@ -63,33 +78,30 @@ linters:
   - unparam
   - unused
   - usestdlibvars
+  - wastedassign
   - whitespace
+  - zerologlint
   disable:
   - cyclop
+  - depguard
   - dupl
   - exhaustruct
   - funlen
-  - ginkgolinter
   - gochecknoglobals
   - gocognit
+  - goconst
   - gocyclo
   - godox
   - goheader
   - gomnd
-  - gomoddirectives
   - lll
   - maintidx
-  - makezero
   - nestif
   - nlreturn
   - nonamedreturns
   - paralleltest
-  - revive
-  - rowserrcheck # https://github.com/golangci/golangci-lint/issues/2649
-  - sqlclosecheck # https://github.com/golangci/golangci-lint/issues/2649
   - tparallel
   - varnamelen
-  - wastedassign # https://github.com/golangci/golangci-lint/issues/2649
   - wrapcheck
   - wsl
 
