@@ -3,7 +3,6 @@ package logger
 import (
 	"io"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,7 +28,7 @@ type Config struct {
 
 	// Format defines the logging tags
 	//
-	// Optional. Default: [${time}] ${status} - ${latency} ${method} ${path}\n
+	// Optional. Default: ${time} | ${status} | ${latency} | ${ip} | ${method} | ${path} | ${error}\n
 	Format string
 
 	// TimeFormat https://programming.guide/go/format-parse-string-time-date-example.html
@@ -51,6 +50,11 @@ type Config struct {
 	//
 	// Default: os.Stdout
 	Output io.Writer
+
+	// DisableColors defines if the logs output should be colorized
+	//
+	// Default: false
+	DisableColors bool
 
 	enableColors     bool
 	enableLatency    bool
@@ -80,25 +84,15 @@ type LogFunc func(output Buffer, c *fiber.Ctx, data *Data, extraParam string) (i
 
 // ConfigDefault is the default config
 var ConfigDefault = Config{
-	Next:         nil,
-	Done:         nil,
-	Format:       "[${time}] ${status} - ${latency} ${method} ${path}\n",
-	TimeFormat:   "15:04:05",
-	TimeZone:     "Local",
-	TimeInterval: 500 * time.Millisecond,
-	Output:       os.Stdout,
-	enableColors: true,
-}
-
-// Function to check if the logger format is compatible for coloring
-func checkColorEnable(format string) bool {
-	validTemplates := []string{"${status}", "${method}"}
-	for _, template := range validTemplates {
-		if strings.Contains(format, template) {
-			return true
-		}
-	}
-	return false
+	Next:          nil,
+	Done:          nil,
+	Format:        "${time} | ${status} | ${latency} | ${ip} | ${method} | ${path} | ${error}\n",
+	TimeFormat:    "15:04:05",
+	TimeZone:      "Local",
+	TimeInterval:  500 * time.Millisecond,
+	Output:        os.Stdout,
+	DisableColors: false,
+	enableColors:  true,
 }
 
 // Helper function to set default values
@@ -121,7 +115,6 @@ func configDefault(config ...Config) Config {
 	if cfg.Format == "" {
 		cfg.Format = ConfigDefault.Format
 	}
-
 	if cfg.TimeZone == "" {
 		cfg.TimeZone = ConfigDefault.TimeZone
 	}
@@ -135,8 +128,7 @@ func configDefault(config ...Config) Config {
 		cfg.Output = ConfigDefault.Output
 	}
 
-	// Enable colors if no custom format or output is given
-	if cfg.Output == ConfigDefault.Output && checkColorEnable(cfg.Format) {
+	if !cfg.DisableColors && cfg.Output == ConfigDefault.Output {
 		cfg.enableColors = true
 	}
 
