@@ -36,13 +36,37 @@ func (g *Geom) Destroy() {
 }
 
 // Bounds returns g's bounds.
-func (g *Geom) Bounds() *Bounds {
+func (g *Geom) Bounds() *Box2D {
 	g.mustNotBeDestroyed()
-	bounds := NewBoundsEmpty()
+	bounds := NewBox2DEmpty()
 	g.context.Lock()
 	defer g.context.Unlock()
 	C.c_GEOSGeomBounds_r(g.context.handle, g.geom, (*C.double)(&bounds.MinX), (*C.double)(&bounds.MinY), (*C.double)(&bounds.MaxX), (*C.double)(&bounds.MaxY))
 	return bounds
+}
+
+// MakeValidWithParams returns a new valid geometry using the MakeValidMethods and MakeValidCollapsed parameters.
+func (g *Geom) MakeValidWithParams(method MakeValidMethod, collapse MakeValidCollapsed) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	cRes := C.c_GEOSMakeValidWithParams_r(g.context.handle, g.geom, (C.enum_GEOSMakeValidMethods)(method), (C.int)(collapse))
+	return g.context.newGeom(cRes, nil)
+}
+
+// BufferWithParams returns g buffered with bufferParams.
+func (g *Geom) BufferWithParams(bufferParams *BufferParams, width float64) *Geom {
+	g.context.Lock()
+	defer g.context.Unlock()
+	if bufferParams.context != g.context {
+		bufferParams.context.Lock()
+		defer bufferParams.context.Unlock()
+	}
+	return g.context.newNonNilGeom(C.GEOSBufferWithParams_r(g.context.handle, g.geom, bufferParams.bufferParams, C.double(width)), nil)
+}
+
+func (g *Geom) ClipByBox2D(box2d *Box2D) *Geom {
+	return g.ClipByRect(box2d.MinX, box2d.MinY, box2d.MaxX, box2d.MaxY)
 }
 
 // CoordSeq returns g's coordinate sequence.
@@ -251,6 +275,22 @@ func (g *Geom) SetUserData(userdata uintptr) *Geom {
 func (g *Geom) String() string {
 	g.mustNotBeDestroyed()
 	return g.ToWKT()
+}
+
+// ToEWKB returns g in Extended WKB format with its SRID.
+func (g *Geom) ToEWKBWithSRID() []byte {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	if g.context.ewkbWithSRIDWriter == nil {
+		g.context.ewkbWithSRIDWriter = C.GEOSWKBWriter_create_r(g.context.handle)
+		C.GEOSWKBWriter_setFlavor_r(g.context.handle, g.context.ewkbWithSRIDWriter, C.GEOS_WKB_EXTENDED)
+		C.GEOSWKBWriter_setIncludeSRID_r(g.context.handle, g.context.ewkbWithSRIDWriter, 1)
+	}
+	var size C.size_t
+	ewkbCBuf := C.GEOSWKBWriter_write_r(g.context.handle, g.context.ewkbWithSRIDWriter, g.geom, &size)
+	defer C.GEOSFree_r(g.context.handle, unsafe.Pointer(ewkbCBuf))
+	return C.GoBytes(unsafe.Pointer(ewkbCBuf), C.int(size))
 }
 
 // ToGeoJSON returns g in GeoJSON format.
