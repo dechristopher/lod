@@ -1,6 +1,8 @@
 module github.com/dechristopher/lod
 
-go 1.19
+go 1.23.0
+
+toolchain go1.24.2
 
 require (
 	github.com/BurntSushi/toml v1.3.2
@@ -13,7 +15,7 @@ require (
 	github.com/prometheus/client_model v0.3.0
 	github.com/twpayne/go-geos v0.13.2
 	github.com/valyala/fasthttp v1.45.0
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.13.0
 )
 
 require (
