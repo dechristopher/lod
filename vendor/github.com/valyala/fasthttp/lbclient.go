@@ -1,10 +1,15 @@
 package fasthttp
 
 import (
+	"errors"
 	"sync"
 	"sync/atomic"
 	"time"
 )
+
+// ErrNoAvailableClients is returned by LBClient methods when no clients are
+// available, for example after every client has been removed.
+var ErrNoAvailableClients = errors.New("fasthttp: no available clients")
 
 // BalancingClient is the interface for clients, which may be passed
 // to LBClient.Clients.
@@ -27,10 +32,6 @@ type BalancingClient interface {
 type LBClient struct {
 	noCopy noCopy
 
-	// Clients must contain non-zero clients list.
-	// Incoming requests are balanced among these clients.
-	Clients []BalancingClient
-
 	// HealthCheck is a callback called after each request.
 	//
 	// The request, response and the error returned by the client
@@ -42,15 +43,20 @@ type LBClient struct {
 	// By default HealthCheck returns false if err != nil.
 	HealthCheck func(req *Request, resp *Response, err error) bool
 
+	// Clients must contain non-zero clients list.
+	// Incoming requests are balanced among these clients.
+	Clients []BalancingClient
+
+	cs []*lbClient
+
 	// Timeout is the request timeout used when calling LBClient.Do.
 	//
 	// DefaultLBClientTimeout is used by default.
 	Timeout time.Duration
 
-	cs []*lbClient
+	mu sync.RWMutex
 
 	once sync.Once
-	mu   sync.RWMutex
 }
 
 // DefaultLBClientTimeout is the default request timeout used by LBClient
@@ -59,15 +65,23 @@ type LBClient struct {
 // The timeout may be overridden via LBClient.Timeout.
 const DefaultLBClientTimeout = time.Second
 
-// DoDeadline calls DoDeadline on the least loaded client
+// DoDeadline calls DoDeadline on the least loaded client.
 func (cc *LBClient) DoDeadline(req *Request, resp *Response, deadline time.Time) error {
-	return cc.get().DoDeadline(req, resp, deadline)
+	c := cc.get()
+	if c == nil {
+		return ErrNoAvailableClients
+	}
+	return c.DoDeadline(req, resp, deadline)
 }
 
-// DoTimeout calculates deadline and calls DoDeadline on the least loaded client
+// DoTimeout calculates deadline and calls DoDeadline on the least loaded client.
 func (cc *LBClient) DoTimeout(req *Request, resp *Response, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
-	return cc.get().DoDeadline(req, resp, deadline)
+	c := cc.get()
+	if c == nil {
+		return ErrNoAvailableClients
+	}
+	return c.DoDeadline(req, resp, deadline)
 }
 
 // Do calculates timeout using LBClient.Timeout and calls DoTimeout
@@ -84,6 +98,7 @@ func (cc *LBClient) init() {
 	cc.mu.Lock()
 	defer cc.mu.Unlock()
 	if len(cc.Clients) == 0 {
+		// developer sanity-check
 		panic("BUG: LBClient.Clients cannot be empty")
 	}
 	for _, c := range cc.Clients {
@@ -94,23 +109,25 @@ func (cc *LBClient) init() {
 	}
 }
 
-// AddClient adds a new client to the balanced clients
-// returns the new total number of clients
+// AddClient adds a new client to the balanced clients and
+// returns the new total number of clients.
 func (cc *LBClient) AddClient(c BalancingClient) int {
 	cc.mu.Lock()
+	defer cc.mu.Unlock()
 	cc.cs = append(cc.cs, &lbClient{
 		c:           c,
 		healthCheck: cc.HealthCheck,
 	})
-	cc.mu.Unlock()
 	return len(cc.cs)
 }
 
-// RemoveClients removes clients using the provided callback
-// if rc returns true, the passed client will be removed
-// returns the new total number of clients
+// RemoveClients removes clients using the provided callback.
+// If rc returns true, the passed client will be removed.
+// Returns the new total number of clients.
 func (cc *LBClient) RemoveClients(rc func(BalancingClient) bool) int {
 	cc.mu.Lock()
+	// defer so a panic in the user-supplied rc can't leak the lock.
+	defer cc.mu.Unlock()
 	n := 0
 	for _, cs := range cc.cs {
 		if rc(cs.c) {
@@ -119,12 +136,14 @@ func (cc *LBClient) RemoveClients(rc func(BalancingClient) bool) int {
 		cc.cs[n] = cs
 		n++
 	}
+	// Nil out the now-unused tail so removed clients can be garbage collected.
+	// This is done only after the loop so a panic in rc can't leave cc.cs with
+	// nil holes that would later crash get().
 	for i := n; i < len(cc.cs); i++ {
 		cc.cs[i] = nil
 	}
 	cc.cs = cc.cs[:n]
 
-	cc.mu.Unlock()
 	return len(cc.cs)
 }
 
@@ -132,7 +151,13 @@ func (cc *LBClient) get() *lbClient {
 	cc.once.Do(cc.init)
 
 	cc.mu.RLock()
+	defer cc.mu.RUnlock()
+
 	cs := cc.cs
+	if len(cs) == 0 {
+		// No clients (e.g. all removed): avoid panicking on cs[0].
+		return nil
+	}
 
 	minC := cs[0]
 	minN := minC.PendingRequests()
@@ -146,7 +171,6 @@ func (cc *LBClient) get() *lbClient {
 			minT = t
 		}
 	}
-	cc.mu.RUnlock()
 	return minC
 }
 

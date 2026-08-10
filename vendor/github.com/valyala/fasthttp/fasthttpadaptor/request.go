@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"unsafe"
+	"strings"
 
 	"github.com/valyala/fasthttp"
 )
@@ -51,7 +51,7 @@ func ConvertRequest(ctx *fasthttp.RequestCtx, r *http.Request, forServer bool) e
 		}
 	}
 
-	ctx.Request.Header.VisitAll(func(k, v []byte) {
+	for k, v := range ctx.Request.Header.All() {
 		sk := b2s(k)
 		sv := b2s(v)
 
@@ -59,14 +59,12 @@ func ConvertRequest(ctx *fasthttp.RequestCtx, r *http.Request, forServer bool) e
 		case "Transfer-Encoding":
 			r.TransferEncoding = append(r.TransferEncoding, sv)
 		default:
-			r.Header.Set(sk, sv)
+			if sk == fasthttp.HeaderCookie {
+				sv = strings.Clone(sv)
+			}
+			r.Header.Add(sk, sv)
 		}
-	})
+	}
 
 	return nil
-}
-
-func b2s(b []byte) string {
-	/* #nosec G103 */
-	return *(*string)(unsafe.Pointer(&b))
 }

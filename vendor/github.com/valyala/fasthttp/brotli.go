@@ -17,8 +17,8 @@ const (
 	CompressBrotliBestSpeed       = brotli.BestSpeed
 	CompressBrotliBestCompression = brotli.BestCompression
 
-	// Choose a default brotli compression level comparable to
-	// CompressDefaultCompression (gzip 6)
+	// CompressBrotliDefaultCompression chooses a default brotli compression level comparable to
+	// CompressDefaultCompression (gzip 6).
 	// See: https://github.com/valyala/fasthttp/issues/798#issuecomment-626293806
 	CompressBrotliDefaultCompression = 4
 )
@@ -28,7 +28,7 @@ func acquireBrotliReader(r io.Reader) (*brotli.Reader, error) {
 	if v == nil {
 		return brotli.NewReader(r), nil
 	}
-	zr := v.(*brotli.Reader)
+	zr := v.(*brotli.Reader) //nolint:forcetypeassert
 	if err := zr.Reset(r); err != nil {
 		return nil, err
 	}
@@ -50,7 +50,7 @@ func acquireStacklessBrotliWriter(w io.Writer, level int) stackless.Writer {
 			return acquireRealBrotliWriter(w, level)
 		})
 	}
-	sw := v.(stackless.Writer)
+	sw := v.(stackless.Writer) //nolint:forcetypeassert
 	sw.Reset(w)
 	return sw
 }
@@ -70,7 +70,7 @@ func acquireRealBrotliWriter(w io.Writer, level int) *brotli.Writer {
 		zw := brotli.NewWriterLevel(w, level)
 		return zw
 	}
-	zw := v.(*brotli.Writer)
+	zw := v.(*brotli.Writer) //nolint:forcetypeassert
 	zw.Reset(w)
 	return zw
 }
@@ -97,7 +97,7 @@ var (
 //   - CompressBrotliBestCompression
 //   - CompressBrotliDefaultCompression
 func AppendBrotliBytesLevel(dst, src []byte, level int) []byte {
-	w := &byteSliceWriter{dst}
+	w := &byteSliceWriter{b: dst}
 	WriteBrotliLevel(w, src, level) //nolint:errcheck
 	return w.b
 }
@@ -132,16 +132,23 @@ func WriteBrotliLevel(w io.Writer, p []byte, level int) (int, error) {
 	}
 }
 
-var stacklessWriteBrotli = stackless.NewFunc(nonblockingWriteBrotli)
+var (
+	stacklessWriteBrotliOnce sync.Once
+	stacklessWriteBrotliFunc func(ctx any) bool
+)
 
-func nonblockingWriteBrotli(ctxv interface{}) {
-	ctx := ctxv.(*compressCtx)
+func stacklessWriteBrotli(ctx any) {
+	stacklessWriteBrotliOnce.Do(func() {
+		stacklessWriteBrotliFunc = stackless.NewFunc(nonblockingWriteBrotli)
+	})
+	stacklessWriteBrotliFunc(ctx)
+}
+
+func nonblockingWriteBrotli(ctxv any) {
+	ctx := ctxv.(*compressCtx) //nolint:forcetypeassert
 	zw := acquireRealBrotliWriter(ctx.w, ctx.level)
 
-	_, err := zw.Write(ctx.p)
-	if err != nil {
-		panic(fmt.Sprintf("BUG: brotli.Writer.Write for len(p)=%d returned unexpected error: %v", len(ctx.p), err))
-	}
+	zw.Write(ctx.p) //nolint:errcheck // no way to handle this error anyway
 
 	releaseRealBrotliWriter(zw, ctx.level)
 }
@@ -160,12 +167,16 @@ func AppendBrotliBytes(dst, src []byte) []byte {
 // WriteUnbrotli writes unbrotlied p to w and returns the number of uncompressed
 // bytes written to w.
 func WriteUnbrotli(w io.Writer, p []byte) (int, error) {
-	r := &byteSliceReader{p}
+	return writeUnbrotli(w, p, 0)
+}
+
+func writeUnbrotli(w io.Writer, p []byte, maxBodySize int) (int, error) {
+	r := &byteSliceReader{b: p}
 	zr, err := acquireBrotliReader(r)
 	if err != nil {
 		return 0, err
 	}
-	n, err := copyZeroAlloc(w, zr)
+	n, err := copyZeroAllocWithLimit(w, zr, maxBodySize)
 	releaseBrotliReader(zr)
 	nn := int(n)
 	if int64(nn) != n {
@@ -176,7 +187,7 @@ func WriteUnbrotli(w io.Writer, p []byte) (int, error) {
 
 // AppendUnbrotliBytes appends unbrotlied src to dst and returns the resulting dst.
 func AppendUnbrotliBytes(dst, src []byte) ([]byte, error) {
-	w := &byteSliceWriter{dst}
+	w := &byteSliceWriter{b: dst}
 	_, err := WriteUnbrotli(w, src)
 	return w.b, err
 }

@@ -1,25 +1,22 @@
 package brotli
 
 import (
-	"compress/gzip"
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/andybalholm/brotli/flate"
 )
 
 // HTTPCompressor chooses a compression method (brotli, gzip, or none) based on
 // the Accept-Encoding header, sets the Content-Encoding header, and returns a
 // WriteCloser that implements that compression. The Close method must be called
 // before the current HTTP handler returns.
-//
-// Due to https://github.com/golang/go/issues/31753, the response will not be
-// compressed unless you set a Content-Type header before you call
-// HTTPCompressor.
 func HTTPCompressor(w http.ResponseWriter, r *http.Request) io.WriteCloser {
-	if w.Header().Get("Content-Type") == "" {
-		return nopCloser{w}
-	}
+	return HTTPCompressorWithLevel(w, r, 4)
+}
 
+func HTTPCompressorWithLevel(w http.ResponseWriter, r *http.Request, level int) io.WriteCloser {
 	if w.Header().Get("Vary") == "" {
 		w.Header().Set("Vary", "Accept-Encoding")
 	}
@@ -28,10 +25,10 @@ func HTTPCompressor(w http.ResponseWriter, r *http.Request) io.WriteCloser {
 	switch encoding {
 	case "br":
 		w.Header().Set("Content-Encoding", "br")
-		return NewWriter(w)
+		return NewWriterV2(w, level)
 	case "gzip":
 		w.Header().Set("Content-Encoding", "gzip")
-		return gzip.NewWriter(w)
+		return flate.NewGZIPWriter(w, level)
 	}
 	return nopCloser{w}
 }

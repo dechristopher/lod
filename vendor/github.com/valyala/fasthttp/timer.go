@@ -10,6 +10,7 @@ func initTimer(t *time.Timer, timeout time.Duration) *time.Timer {
 		return time.NewTimer(timeout)
 	}
 	if t.Reset(timeout) {
+		// developer sanity-check
 		panic("BUG: active timer trapped into initTimer()")
 	}
 	return t
@@ -36,7 +37,7 @@ func AcquireTimer(timeout time.Duration) *time.Timer {
 	if v == nil {
 		return time.NewTimer(timeout)
 	}
-	t := v.(*time.Timer)
+	t := v.(*time.Timer) //nolint:forcetypeassert
 	initTimer(t, timeout)
 	return t
 }

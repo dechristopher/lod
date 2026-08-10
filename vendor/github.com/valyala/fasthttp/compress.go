@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
+	"io/fs"
 	"sync"
 
 	"github.com/klauspost/compress/flate"
@@ -28,7 +28,7 @@ func acquireGzipReader(r io.Reader) (*gzip.Reader, error) {
 	if v == nil {
 		return gzip.NewReader(r)
 	}
-	zr := v.(*gzip.Reader)
+	zr := v.(*gzip.Reader) //nolint:forcetypeassert
 	if err := zr.Reset(r); err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func acquireFlateReader(r io.Reader) (io.ReadCloser, error) {
 		}
 		return zr, nil
 	}
-	zr := v.(io.ReadCloser)
+	zr := v.(io.ReadCloser) //nolint:forcetypeassert
 	if err := resetFlateReader(zr, r); err != nil {
 		return nil, err
 	}
@@ -66,6 +66,7 @@ func releaseFlateReader(zr io.ReadCloser) {
 func resetFlateReader(zr io.ReadCloser, r io.Reader) error {
 	zrr, ok := zr.(zlib.Resetter)
 	if !ok {
+		// sanity check. should only be called with a zlib.Reader
 		panic("BUG: zlib.Reader doesn't implement zlib.Resetter???")
 	}
 	return zrr.Reset(r, nil)
@@ -82,7 +83,7 @@ func acquireStacklessGzipWriter(w io.Writer, level int) stackless.Writer {
 			return acquireRealGzipWriter(w, level)
 		})
 	}
-	sw := v.(stackless.Writer)
+	sw := v.(stackless.Writer) //nolint:forcetypeassert
 	sw.Reset(w)
 	return sw
 }
@@ -101,11 +102,18 @@ func acquireRealGzipWriter(w io.Writer, level int) *gzip.Writer {
 	if v == nil {
 		zw, err := gzip.NewWriterLevel(w, level)
 		if err != nil {
-			panic(fmt.Sprintf("BUG: unexpected error from gzip.NewWriterLevel(%d): %v", level, err))
+			// gzip.NewWriterLevel only errors for invalid
+			// compression levels. Clamp it to be min or max.
+			if level < gzip.HuffmanOnly {
+				level = gzip.HuffmanOnly
+			} else {
+				level = gzip.BestCompression
+			}
+			zw, _ = gzip.NewWriterLevel(w, level)
 		}
 		return zw
 	}
-	zw := v.(*gzip.Writer)
+	zw := v.(*gzip.Writer) //nolint:forcetypeassert
 	zw.Reset(w)
 	return zw
 }
@@ -133,7 +141,7 @@ var (
 //   - CompressDefaultCompression
 //   - CompressHuffmanOnly
 func AppendGzipBytesLevel(dst, src []byte, level int) []byte {
-	w := &byteSliceWriter{dst}
+	w := &byteSliceWriter{b: dst}
 	WriteGzipLevel(w, src, level) //nolint:errcheck
 	return w.b
 }
@@ -169,16 +177,23 @@ func WriteGzipLevel(w io.Writer, p []byte, level int) (int, error) {
 	}
 }
 
-var stacklessWriteGzip = stackless.NewFunc(nonblockingWriteGzip)
+var (
+	stacklessWriteGzipOnce sync.Once
+	stacklessWriteGzipFunc func(ctx any) bool
+)
 
-func nonblockingWriteGzip(ctxv interface{}) {
-	ctx := ctxv.(*compressCtx)
+func stacklessWriteGzip(ctx any) {
+	stacklessWriteGzipOnce.Do(func() {
+		stacklessWriteGzipFunc = stackless.NewFunc(nonblockingWriteGzip)
+	})
+	stacklessWriteGzipFunc(ctx)
+}
+
+func nonblockingWriteGzip(ctxv any) {
+	ctx := ctxv.(*compressCtx) //nolint:forcetypeassert
 	zw := acquireRealGzipWriter(ctx.w, ctx.level)
 
-	_, err := zw.Write(ctx.p)
-	if err != nil {
-		panic(fmt.Sprintf("BUG: gzip.Writer.Write for len(p)=%d returned unexpected error: %v", len(ctx.p), err))
-	}
+	zw.Write(ctx.p) //nolint:errcheck // no way to handle this error anyway
 
 	releaseRealGzipWriter(zw, ctx.level)
 }
@@ -197,12 +212,16 @@ func AppendGzipBytes(dst, src []byte) []byte {
 // WriteGunzip writes ungzipped p to w and returns the number of uncompressed
 // bytes written to w.
 func WriteGunzip(w io.Writer, p []byte) (int, error) {
-	r := &byteSliceReader{p}
+	return writeGunzip(w, p, 0)
+}
+
+func writeGunzip(w io.Writer, p []byte, maxBodySize int) (int, error) {
+	r := &byteSliceReader{b: p}
 	zr, err := acquireGzipReader(r)
 	if err != nil {
 		return 0, err
 	}
-	n, err := copyZeroAlloc(w, zr)
+	n, err := copyZeroAllocWithLimit(w, zr, maxBodySize)
 	releaseGzipReader(zr)
 	nn := int(n)
 	if int64(nn) != n {
@@ -213,7 +232,7 @@ func WriteGunzip(w io.Writer, p []byte) (int, error) {
 
 // AppendGunzipBytes appends gunzipped src to dst and returns the resulting dst.
 func AppendGunzipBytes(dst, src []byte) ([]byte, error) {
-	w := &byteSliceWriter{dst}
+	w := &byteSliceWriter{b: dst}
 	_, err := WriteGunzip(w, src)
 	return w.b, err
 }
@@ -229,7 +248,7 @@ func AppendGunzipBytes(dst, src []byte) ([]byte, error) {
 //   - CompressDefaultCompression
 //   - CompressHuffmanOnly
 func AppendDeflateBytesLevel(dst, src []byte, level int) []byte {
-	w := &byteSliceWriter{dst}
+	w := &byteSliceWriter{b: dst}
 	WriteDeflateLevel(w, src, level) //nolint:errcheck
 	return w.b
 }
@@ -265,16 +284,23 @@ func WriteDeflateLevel(w io.Writer, p []byte, level int) (int, error) {
 	}
 }
 
-var stacklessWriteDeflate = stackless.NewFunc(nonblockingWriteDeflate)
+var (
+	stacklessWriteDeflateOnce sync.Once
+	stacklessWriteDeflateFunc func(ctx any) bool
+)
 
-func nonblockingWriteDeflate(ctxv interface{}) {
-	ctx := ctxv.(*compressCtx)
+func stacklessWriteDeflate(ctx any) {
+	stacklessWriteDeflateOnce.Do(func() {
+		stacklessWriteDeflateFunc = stackless.NewFunc(nonblockingWriteDeflate)
+	})
+	stacklessWriteDeflateFunc(ctx)
+}
+
+func nonblockingWriteDeflate(ctxv any) {
+	ctx := ctxv.(*compressCtx) //nolint:forcetypeassert
 	zw := acquireRealDeflateWriter(ctx.w, ctx.level)
 
-	_, err := zw.Write(ctx.p)
-	if err != nil {
-		panic(fmt.Sprintf("BUG: zlib.Writer.Write for len(p)=%d returned unexpected error: %v", len(ctx.p), err))
-	}
+	zw.Write(ctx.p) //nolint:errcheck // no way to handle this error anyway
 
 	releaseRealDeflateWriter(zw, ctx.level)
 }
@@ -299,12 +325,16 @@ func AppendDeflateBytes(dst, src []byte) []byte {
 // WriteInflate writes inflated p to w and returns the number of uncompressed
 // bytes written to w.
 func WriteInflate(w io.Writer, p []byte) (int, error) {
-	r := &byteSliceReader{p}
+	return writeInflate(w, p, 0)
+}
+
+func writeInflate(w io.Writer, p []byte, maxBodySize int) (int, error) {
+	r := &byteSliceReader{b: p}
 	zr, err := acquireFlateReader(r)
 	if err != nil {
 		return 0, err
 	}
-	n, err := copyZeroAlloc(w, zr)
+	n, err := copyZeroAllocWithLimit(w, zr, maxBodySize)
 	releaseFlateReader(zr)
 	nn := int(n)
 	if int64(nn) != n {
@@ -315,7 +345,7 @@ func WriteInflate(w io.Writer, p []byte) (int, error) {
 
 // AppendInflateBytes appends inflated src to dst and returns the resulting dst.
 func AppendInflateBytes(dst, src []byte) ([]byte, error) {
-	w := &byteSliceWriter{dst}
+	w := &byteSliceWriter{b: dst}
 	_, err := WriteInflate(w, src)
 	return w.b, err
 }
@@ -327,6 +357,11 @@ type byteSliceWriter struct {
 func (w *byteSliceWriter) Write(p []byte) (int, error) {
 	w.b = append(w.b, p...)
 	return len(p), nil
+}
+
+func (w *byteSliceWriter) WriteString(s string) (int, error) {
+	w.b = append(w.b, s...)
+	return len(s), nil
 }
 
 type byteSliceReader struct {
@@ -360,7 +395,7 @@ func acquireStacklessDeflateWriter(w io.Writer, level int) stackless.Writer {
 			return acquireRealDeflateWriter(w, level)
 		})
 	}
-	sw := v.(stackless.Writer)
+	sw := v.(stackless.Writer) //nolint:forcetypeassert
 	sw.Reset(w)
 	return sw
 }
@@ -379,11 +414,18 @@ func acquireRealDeflateWriter(w io.Writer, level int) *zlib.Writer {
 	if v == nil {
 		zw, err := zlib.NewWriterLevel(w, level)
 		if err != nil {
-			panic(fmt.Sprintf("BUG: unexpected error from zlib.NewWriterLevel(%d): %v", level, err))
+			// zlib.NewWriterLevel only errors for invalid
+			// compression levels. Clamp it to be min or max.
+			if level < zlib.HuffmanOnly {
+				level = zlib.HuffmanOnly
+			} else {
+				level = zlib.BestCompression
+			}
+			zw, _ = zlib.NewWriterLevel(w, level)
 		}
 		return zw
 	}
-	zw := v.(*zlib.Writer)
+	zw := v.(*zlib.Writer) //nolint:forcetypeassert
 	zw.Reset(w)
 	return zw
 }
@@ -405,14 +447,14 @@ func newCompressWriterPoolMap() []*sync.Pool {
 	// in https://pkg.go.dev/compress/flate#pkg-constants .
 	// Compression levels are normalized with normalizeCompressLevel,
 	// so the fit [0..11].
-	var m []*sync.Pool
-	for i := 0; i < 12; i++ {
+	m := make([]*sync.Pool, 0, 12)
+	for range 12 {
 		m = append(m, &sync.Pool{})
 	}
 	return m
 }
 
-func isFileCompressible(f *os.File, minCompressRatio float64) bool {
+func isFileCompressible(f fs.File, minCompressRatio float64) bool {
 	// Try compressing the first 4kb of the file
 	// and see if it can be compressed by more than
 	// the given minCompressRatio.
@@ -424,7 +466,11 @@ func isFileCompressible(f *os.File, minCompressRatio float64) bool {
 	}
 	_, err := copyZeroAlloc(zw, lr)
 	releaseStacklessGzipWriter(zw, CompressDefaultCompression)
-	f.Seek(0, 0) //nolint:errcheck
+	seeker, ok := f.(io.Seeker)
+	if !ok {
+		return false
+	}
+	seeker.Seek(0, io.SeekStart) //nolint:errcheck
 	if err != nil {
 		return false
 	}
