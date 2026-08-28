@@ -6,7 +6,7 @@ package fiber
 
 import (
 	"fmt"
-	"sort"
+	"html"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -46,9 +46,10 @@ type Router interface {
 
 // Route is a struct that holds all metadata for each registered handler.
 type Route struct {
+	// ### important: always keep in sync with the copy method "app.copyRoute" and all creations of Route struct ###
 	// Data for routing
-	pos         uint32      // Position in stack -> important for the sort of the matched routes
 	use         bool        // USE matches path prefixes
+	mount       bool        // Indicated a mounted app on a specific route
 	star        bool        // Path equals '*'
 	root        bool        // Path equals '/'
 	path        string      // Prettified path
@@ -105,18 +106,25 @@ func (app *App) next(c *Ctx) (bool, error) {
 	if !ok {
 		tree = app.treeStack[c.methodINT][""]
 	}
-	lenr := len(tree) - 1
+	lenTree := len(tree) - 1
 
 	// Loop over the route stack starting from previous index
-	for c.indexRoute < lenr {
+	for c.indexRoute < lenTree {
 		// Increment route index
 		c.indexRoute++
 
 		// Get *Route
 		route := tree[c.indexRoute]
 
+		var match bool
+		var err error
+		// skip for mounted apps
+		if route.mount {
+			continue
+		}
+
 		// Check if it matches the request path
-		match := route.match(c.detectionPath, c.path, &c.values)
+		match = route.match(c.detectionPath, c.path, &c.values)
 		if !match {
 			// No match, next route
 			continue
@@ -131,12 +139,14 @@ func (app *App) next(c *Ctx) (bool, error) {
 
 		// Execute first handler of route
 		c.indexHandler = 0
-		err := route.Handlers[0](c)
+		if len(route.Handlers) > 0 {
+			err = route.Handlers[0](c)
+		}
 		return match, err // Stop scanning the stack
 	}
 
 	// If c.Next() does not match, return 404
-	err := NewError(StatusNotFound, "Cannot "+c.method+" "+c.pathOriginal)
+	err := NewError(StatusNotFound, "Cannot "+c.method+" "+html.EscapeString(c.pathOriginal))
 	if !c.matched && app.methodExist(c) {
 		// If no match, scan stack again if other methods match the request
 		// Moved from app.handler because middleware may break the route chain
@@ -173,7 +183,7 @@ func (app *App) handler(rctx *fasthttp.RequestCtx) { //revive:disable-line:confu
 func (app *App) addPrefixToRoute(prefix string, route *Route) *Route {
 	prefixedPath := getGroupPath(prefix, route.Path)
 	prettyPath := prefixedPath
-	// Case sensitive routing, all to lowercase
+	// Case-sensitive routing, all to lowercase
 	if !app.config.CaseSensitive {
 		prettyPath = utils.ToLower(prettyPath)
 	}
@@ -194,31 +204,35 @@ func (app *App) addPrefixToRoute(prefix string, route *Route) *Route {
 func (*App) copyRoute(route *Route) *Route {
 	return &Route{
 		// Router booleans
-		use:  route.use,
-		star: route.star,
-		root: route.root,
+		use:   route.use,
+		mount: route.mount,
+		star:  route.star,
+		root:  route.root,
 
 		// Path data
 		path:        route.path,
 		routeParser: route.routeParser,
-		Params:      route.Params,
 
 		// Public data
 		Path:     route.Path,
+		Params:   route.Params,
+		Name:     route.Name,
 		Method:   route.Method,
 		Handlers: route.Handlers,
 	}
 }
 
-func (app *App) register(method, pathRaw string, group *Group, handlers ...Handler) Router {
+func (app *App) register(method, pathRaw string, group *Group, handlers ...Handler) {
 	// Uppercase HTTP methods
 	method = utils.ToUpper(method)
 	// Check if the HTTP method is valid unless it's USE
 	if method != methodUse && app.methodInt(method) == -1 {
 		panic(fmt.Sprintf("add: invalid http method %s\n", method))
 	}
+	// is mounted app
+	isMount := group != nil && group.app != app
 	// A route requires atleast one ctx handler
-	if len(handlers) == 0 {
+	if len(handlers) == 0 && !isMount {
 		panic(fmt.Sprintf("missing handler in route: %s\n", pathRaw))
 	}
 	// Cannot have an empty path
@@ -231,7 +245,7 @@ func (app *App) register(method, pathRaw string, group *Group, handlers ...Handl
 	}
 	// Create a stripped path in-case sensitive / trailing slashes
 	pathPretty := pathRaw
-	// Case sensitive routing, all to lowercase
+	// Case-sensitive routing, all to lowercase
 	if !app.config.CaseSensitive {
 		pathPretty = utils.ToLower(pathPretty)
 	}
@@ -252,9 +266,10 @@ func (app *App) register(method, pathRaw string, group *Group, handlers ...Handl
 	// Create route metadata without pointer
 	route := Route{
 		// Router booleans
-		use:  isUse,
-		star: isStar,
-		root: isRoot,
+		use:   isUse,
+		mount: isMount,
+		star:  isStar,
+		root:  isRoot,
 
 		// Path data
 		path:        RemoveEscapeChar(pathPretty),
@@ -284,11 +299,10 @@ func (app *App) register(method, pathRaw string, group *Group, handlers ...Handl
 		// Add route to stack
 		app.addRoute(method, &route)
 	}
-	return app
 }
 
-func (app *App) registerStatic(prefix, root string, config ...Static) Router {
-	// For security we want to restrict to the current work directory.
+func (app *App) registerStatic(prefix, root string, config ...Static) {
+	// For security, we want to restrict to the current work directory.
 	if root == "" {
 		root = "."
 	}
@@ -300,7 +314,7 @@ func (app *App) registerStatic(prefix, root string, config ...Static) Router {
 	if prefix[0] != '/' {
 		prefix = "/" + prefix
 	}
-	// in case sensitive routing, all to lowercase
+	// in case-sensitive routing, all to lowercase
 	if !app.config.CaseSensitive {
 		prefix = utils.ToLower(prefix)
 	}
@@ -409,12 +423,20 @@ func (app *App) registerStatic(prefix, root string, config ...Static) Router {
 	// Create route metadata without pointer
 	route := Route{
 		// Router booleans
-		use:  true,
-		root: isRoot,
+		use:   true,
+		mount: false,
+		star:  isStar,
+		root:  isRoot,
+
+		// Path data
 		path: prefix,
+
+		// Group data
+		group: nil,
+
 		// Public data
-		Method:   MethodGet,
 		Path:     prefix,
+		Method:   MethodGet,
 		Handlers: []Handler{handler},
 	}
 	// Increment global handler count
@@ -423,27 +445,18 @@ func (app *App) registerStatic(prefix, root string, config ...Static) Router {
 	app.addRoute(MethodGet, &route)
 	// Add HEAD route
 	app.addRoute(MethodHead, &route)
-	return app
 }
 
-func (app *App) addRoute(method string, route *Route, isMounted ...bool) {
-	// Check mounted routes
-	var mounted bool
-	if len(isMounted) > 0 {
-		mounted = isMounted[0]
-	}
-
+func (app *App) addRoute(method string, route *Route) {
 	// Get unique HTTP method identifier
 	m := app.methodInt(method)
 
 	// prevent identically route registration
 	l := len(app.stack[m])
-	if l > 0 && app.stack[m][l-1].Path == route.Path && route.use == app.stack[m][l-1].use {
+	if l > 0 && app.stack[m][l-1].Path == route.Path && route.use == app.stack[m][l-1].use && !route.mount && !app.stack[m][l-1].mount {
 		preRoute := app.stack[m][l-1]
 		preRoute.Handlers = append(preRoute.Handlers, route.Handlers...)
 	} else {
-		// Increment global route position
-		route.pos = atomic.AddUint32(&app.routesCount, 1)
 		route.Method = method
 		// Add route to the stack
 		app.stack[m] = append(app.stack[m], route)
@@ -451,7 +464,7 @@ func (app *App) addRoute(method string, route *Route, isMounted ...bool) {
 	}
 
 	// Execute onRoute hooks & change latestRoute if not adding mounted route
-	if !mounted {
+	if !route.mount {
 		app.mutex.Lock()
 		app.latestRoute = route
 		if err := app.hooks.executeOnRouteHooks(*route); err != nil {
@@ -463,38 +476,59 @@ func (app *App) addRoute(method string, route *Route, isMounted ...bool) {
 
 // buildTree build the prefix tree from the previously registered routes
 func (app *App) buildTree() *App {
+	// If routes haven't been refreshed, nothing to do
 	if !app.routesRefreshed {
 		return app
 	}
 
-	// loop all the methods and stacks and create the prefix tree
-	for m := range app.config.RequestMethods {
-		tsMap := make(map[string][]*Route)
-		for _, route := range app.stack[m] {
-			treePath := ""
+	// 1) First loop: determine all possible 3-char prefixes ("treePaths") for each method
+	for method := range app.config.RequestMethods {
+		prefixSet := map[string]struct{}{
+			"": {},
+		}
+		for _, route := range app.stack[method] {
 			if len(route.routeParser.segs) > 0 && len(route.routeParser.segs[0].Const) >= 3 {
-				treePath = route.routeParser.segs[0].Const[:3]
+				prefix := route.routeParser.segs[0].Const[:3]
+				prefixSet[prefix] = struct{}{}
 			}
-			// create tree stack
-			tsMap[treePath] = append(tsMap[treePath], route)
 		}
-		app.treeStack[m] = tsMap
+		tsMap := make(map[string][]*Route, len(prefixSet))
+		for prefix := range prefixSet {
+			tsMap[prefix] = nil
+		}
+		app.treeStack[method] = tsMap
 	}
 
-	// loop the methods and tree stacks and add global stack and sort everything
-	for m := range app.config.RequestMethods {
-		tsMap := app.treeStack[m]
-		for treePart := range tsMap {
-			if treePart != "" {
-				// merge global tree routes in current tree stack
-				tsMap[treePart] = uniqueRouteStack(append(tsMap[treePart], tsMap[""]...))
+	// 2) Second loop: for each method and each discovered treePath, assign matching routes
+	for method := range app.config.RequestMethods {
+		// get the map of buckets for this method
+		tsMap := app.treeStack[method]
+
+		// for every treePath key (including the empty one)
+		for treePath := range tsMap {
+			// iterate all routes of this method
+			for _, route := range app.stack[method] {
+				// compute this route's own prefix ("" or first 3 chars)
+				routePath := ""
+				if len(route.routeParser.segs) > 0 && len(route.routeParser.segs[0].Const) >= 3 {
+					routePath = route.routeParser.segs[0].Const[:3]
+				}
+
+				// if it's a global route, assign to every bucket
+				if routePath == "" {
+					tsMap[treePath] = append(tsMap[treePath], route)
+					// otherwise only assign if this route's prefix matches the current bucket's key
+				} else if routePath == treePath {
+					tsMap[treePath] = append(tsMap[treePath], route)
+				}
 			}
-			// sort tree slices with the positions
-			slc := tsMap[treePart]
-			sort.Slice(slc, func(i, j int) bool { return slc[i].pos < slc[j].pos })
+
+			// after collecting, dedupe the bucket if it's not the global one
+			tsMap[treePath] = uniqueRouteStack(tsMap[treePath])
 		}
 	}
+
+	// reset the flag and return
 	app.routesRefreshed = false
-
 	return app
 }
