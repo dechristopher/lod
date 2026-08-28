@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package net
 
@@ -11,8 +10,9 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/gofiber/fiber/v2/internal/gopsutil/common"
 	"golang.org/x/sys/windows"
+
+	"github.com/gofiber/fiber/v2/internal/gopsutil/common"
 )
 
 var (
@@ -45,16 +45,19 @@ var kindTCP4 = netConnectionKindType{
 	sockType: syscall.SOCK_STREAM,
 	filename: "tcp",
 }
+
 var kindTCP6 = netConnectionKindType{
 	family:   syscall.AF_INET6,
 	sockType: syscall.SOCK_STREAM,
 	filename: "tcp6",
 }
+
 var kindUDP4 = netConnectionKindType{
 	family:   syscall.AF_INET,
 	sockType: syscall.SOCK_DGRAM,
 	filename: "udp",
 }
+
 var kindUDP6 = netConnectionKindType{
 	family:   syscall.AF_INET6,
 	sockType: syscall.SOCK_DGRAM,
@@ -526,9 +529,7 @@ func getUDPConnections(family uint32) ([]ConnectionStat, error) {
 		buf = make([]byte, size)
 	}
 
-	var (
-		index, step, length int
-	)
+	var index, step, length int
 
 	stats := make([]ConnectionStat, 0)
 	switch family {
@@ -695,8 +696,10 @@ type mibTCP6TableOwnerPid struct {
 	Table        [anySize]mibTCP6RowOwnerPid
 }
 
-type pmibTCPTableOwnerPidAll *mibTCPTableOwnerPid
-type pmibTCP6TableOwnerPidAll *mibTCP6TableOwnerPid
+type (
+	pmibTCPTableOwnerPidAll  *mibTCPTableOwnerPid
+	pmibTCP6TableOwnerPidAll *mibTCP6TableOwnerPid
+)
 
 // UDP
 
@@ -751,8 +754,10 @@ type mibUDP6TableOwnerPid struct {
 	Table        [anySize]mibUDP6RowOwnerPid
 }
 
-type pmibUDPTableOwnerPid *mibUDPTableOwnerPid
-type pmibUDP6TableOwnerPid *mibUDP6TableOwnerPid
+type (
+	pmibUDPTableOwnerPid  *mibUDPTableOwnerPid
+	pmibUDP6TableOwnerPid *mibUDP6TableOwnerPid
+)
 
 func decodePort(port uint32) uint16 {
 	return syscall.Ntohs(uint16(port))

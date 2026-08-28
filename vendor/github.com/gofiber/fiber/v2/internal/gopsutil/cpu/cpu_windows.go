@@ -1,5 +1,4 @@
 //go:build windows
-// +build windows
 
 package cpu
 
@@ -8,9 +7,10 @@ import (
 	"fmt"
 	"unsafe"
 
+	"golang.org/x/sys/windows"
+
 	"github.com/gofiber/fiber/v2/internal/gopsutil/common"
 	"github.com/gofiber/fiber/v2/internal/wmi"
-	"golang.org/x/sys/windows"
 )
 
 var (

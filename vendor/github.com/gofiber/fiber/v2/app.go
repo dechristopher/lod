@@ -14,7 +14,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -24,13 +23,14 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/gofiber/fiber/v2/utils"
 
 	"github.com/valyala/fasthttp"
 )
 
 // Version of current fiber package
-const Version = "2.43.0"
+const Version = "2.52.14"
 
 // Handler defines a function to serve HTTP requests.
 type Handler = func(*Ctx) error
@@ -93,8 +93,6 @@ type App struct {
 	treeStack []map[string][]*Route
 	// contains the information if the route stack has been changed to build the optimized tree
 	routesRefreshed bool
-	// Amount of registered routes
-	routesCount uint32
 	// Amount of registered handlers
 	handlersCount uint32
 	// Ctx pool
@@ -390,6 +388,13 @@ type Config struct {
 	//
 	// Optional. Default: DefaultMethods
 	RequestMethods []string
+
+	// EnableSplittingOnParsers splits the query/body/header parameters by comma when it's true.
+	// For example, you can use it to parse multiple values from a query parameter like this:
+	//   /api?foo=bar,baz == foo[]=bar&foo[]=baz
+	//
+	// Optional. Default: false
+	EnableSplittingOnParsers bool `json:"enable_splitting_on_parsers"`
 }
 
 // Static defines configuration options when defining static assets.
@@ -521,7 +526,7 @@ func New(config ...Config) *App {
 
 	if app.config.ETag {
 		if !IsChild() {
-			log.Printf("[Warning] Config.ETag is deprecated since v2.0.6, please use 'middleware/etag'.\n")
+			log.Warn("Config.ETag is deprecated since v2.0.6, please use 'middleware/etag'.")
 		}
 	}
 
@@ -589,7 +594,7 @@ func (app *App) handleTrustedProxy(ipAddress string) {
 	if strings.Contains(ipAddress, "/") {
 		_, ipNet, err := net.ParseCIDR(ipAddress)
 		if err != nil {
-			log.Printf("[Warning] IP range %q could not be parsed: %v\n", ipAddress, err)
+			log.Warnf("IP range %q could not be parsed: %v", ipAddress, err)
 		} else {
 			app.config.trustedProxyRanges = append(app.config.trustedProxyRanges, ipNet)
 		}
@@ -609,18 +614,25 @@ func (app *App) SetTLSHandler(tlsHandler *TLSHandler) {
 // Name Assign name to specific route.
 func (app *App) Name(name string) Router {
 	app.mutex.Lock()
+	defer app.mutex.Unlock()
 
-	latestGroup := app.latestRoute.group
-	if latestGroup != nil {
-		app.latestRoute.Name = latestGroup.name + name
-	} else {
-		app.latestRoute.Name = name
+	for _, routes := range app.stack {
+		for _, route := range routes {
+			isMethodValid := route.Method == app.latestRoute.Method || app.latestRoute.use ||
+				(app.latestRoute.Method == MethodGet && route.Method == MethodHead)
+
+			if route.Path == app.latestRoute.Path && isMethodValid {
+				route.Name = name
+				if route.group != nil {
+					route.Name = route.group.name + route.Name
+				}
+			}
+		}
 	}
 
 	if err := app.hooks.executeOnNameHooks(*app.latestRoute); err != nil {
 		panic(err)
 	}
-	app.mutex.Unlock()
 
 	return app
 }
@@ -754,12 +766,16 @@ func (app *App) Patch(path string, handlers ...Handler) Router {
 
 // Add allows you to specify a HTTP method to register a route
 func (app *App) Add(method, path string, handlers ...Handler) Router {
-	return app.register(method, path, nil, handlers...)
+	app.register(method, path, nil, handlers...)
+
+	return app
 }
 
 // Static will create a file server serving static files
 func (app *App) Static(prefix, root string, config ...Static) Router {
-	return app.registerStatic(prefix, root, config...)
+	app.registerStatic(prefix, root, config...)
+
+	return app
 }
 
 // All will register the handler on all HTTP methods
@@ -847,7 +863,7 @@ func (app *App) HandlersCount() uint32 {
 //
 // Shutdown does not close keepalive connections so its recommended to set ReadTimeout to something else than 0.
 func (app *App) Shutdown() error {
-	return app.shutdownWithContext(context.Background())
+	return app.ShutdownWithContext(context.Background())
 }
 
 // ShutdownWithTimeout gracefully shuts down the server without interrupting any active connections. However, if the timeout is exceeded,
@@ -860,11 +876,15 @@ func (app *App) Shutdown() error {
 func (app *App) ShutdownWithTimeout(timeout time.Duration) error {
 	ctx, cancelFunc := context.WithTimeout(context.Background(), timeout)
 	defer cancelFunc()
-	return app.shutdownWithContext(ctx)
+	return app.ShutdownWithContext(ctx)
 }
 
-// shutdownWithContext shuts down the server including by force if the context's deadline is exceeded.
-func (app *App) shutdownWithContext(ctx context.Context) error {
+// ShutdownWithContext shuts down the server including by force if the context's deadline is exceeded.
+//
+// Make sure the program doesn't exit and waits instead for ShutdownWithTimeout to return.
+//
+// ShutdownWithContext does not close keepalive connections so its recommended to set ReadTimeout to something else than 0.
+func (app *App) ShutdownWithContext(ctx context.Context) error {
 	if app.hooks != nil {
 		defer app.hooks.executeOnShutdownHooks()
 	}
@@ -974,7 +994,7 @@ func (app *App) init() *App {
 	// Only load templates if a view engine is specified
 	if app.config.Views != nil {
 		if err := app.config.Views.Load(); err != nil {
-			log.Printf("[Warning]: failed to load views: %v\n", err)
+			log.Warnf("failed to load views: %v", err)
 		}
 	}
 
@@ -1021,8 +1041,13 @@ func (app *App) ErrorHandler(ctx *Ctx, err error) error {
 		mountedPrefixParts int
 	)
 
-	for prefix, subApp := range app.mountFields.appList {
-		if prefix != "" && strings.HasPrefix(ctx.path, prefix) {
+	normalizedPath := utils.AddTrailingSlash(ctx.Path())
+
+	for _, prefix := range app.mountFields.appListKeys {
+		subApp := app.mountFields.appList[prefix]
+		normalizedPrefix := utils.AddTrailingSlash(prefix)
+
+		if prefix != "" && strings.HasPrefix(normalizedPath, normalizedPrefix) {
 			parts := len(strings.Split(prefix, "/"))
 			if mountedPrefixParts <= parts {
 				if subApp.configured.ErrorHandler != nil {
@@ -1048,13 +1073,18 @@ func (app *App) serverErrorHandler(fctx *fasthttp.RequestCtx, err error) {
 	c := app.AcquireCtx(fctx)
 	defer app.ReleaseCtx(c)
 
-	var errNetOP *net.OpError
+	var (
+		errNetOP *net.OpError
+		netErr   net.Error
+	)
 
 	switch {
 	case errors.As(err, new(*fasthttp.ErrSmallBuffer)):
 		err = ErrRequestHeaderFieldsTooLarge
 	case errors.As(err, &errNetOP) && errNetOP.Timeout():
 		err = ErrRequestTimeout
+	case errors.As(err, &netErr):
+		err = ErrBadGateway
 	case errors.Is(err, fasthttp.ErrBodyTooLarge):
 		err = ErrRequestEntityTooLarge
 	case errors.Is(err, fasthttp.ErrGetOnly):
@@ -1066,7 +1096,7 @@ func (app *App) serverErrorHandler(fctx *fasthttp.RequestCtx, err error) {
 	}
 
 	if catch := app.ErrorHandler(c, err); catch != nil {
-		log.Printf("serverErrorHandler: failed to call ErrorHandler: %v\n", catch)
+		log.Errorf("serverErrorHandler: failed to call ErrorHandler: %v", catch)
 		_ = c.SendStatus(StatusInternalServerError) //nolint:errcheck // It is fine to ignore the error here
 		return
 	}
@@ -1074,22 +1104,20 @@ func (app *App) serverErrorHandler(fctx *fasthttp.RequestCtx, err error) {
 
 // startupProcess Is the method which executes all the necessary processes just before the start of the server.
 func (app *App) startupProcess() *App {
-	if err := app.hooks.executeOnListenHooks(); err != nil {
-		panic(err)
-	}
-
 	app.mutex.Lock()
 	defer app.mutex.Unlock()
 
-	// add routes of sub-apps
-	app.mountFields.subAppsRoutesAdded.Do(func() {
-		app.appendSubAppLists(app.mountFields.appList)
-		app.addSubAppsRoutes(app.mountFields.appList)
-		app.generateAppListKeys()
-	})
+	app.mountStartupProcess()
 
 	// build route tree stack
 	app.buildTree()
 
 	return app
+}
+
+// Run onListen hooks. If they return an error, panic.
+func (app *App) runOnListenHooks(listenData ListenData) {
+	if err := app.hooks.executeOnListenHooks(listenData); err != nil {
+		panic(err)
+	}
 }
