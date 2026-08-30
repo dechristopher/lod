@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 
-#define GEOS_USE_ONLY_R_API
 #include <geos_c.h>
 
 uintptr_t c_GEOSGeom_getUserData_r(GEOSContextHandle_t handle,
@@ -26,14 +25,9 @@ GEOSGeometry *c_newGEOSGeomFromBounds_r(GEOSContextHandle_t handle, int *typeID,
 int c_GEOSSTRtree_distance_callback(const void *item1, const void *item2,
                                     double *distance, void *userdata);
 void c_GEOSSTRtree_query_callback(void *elem, void *userdata);
-
-#if GEOS_VERSION_MAJOR < 3 ||                                                  \
-    (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 11)
-
-GEOSGeometry *GEOSConcaveHull_r(GEOSContextHandle_t handle,
-                                const GEOSGeometry *g, double ratio,
-                                unsigned int allowHoles);
-
-#endif
+GEOSGeometry *c_GEOSMakeValidWithParams_r(GEOSContextHandle_t handle,
+                                          const GEOSGeometry *g,
+                                          enum GEOSMakeValidMethods method,
+                                          int keepCollapsed);
 
 #endif

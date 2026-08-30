@@ -4,6 +4,16 @@
 
 Package `go-geos` provides an interface to [GEOS](https://libgeos.org).
 
+## Install
+
+```console
+$ go get github.com/twpayne/go-geos
+```
+
+You must also install the GEOS development headers and libraries. These are
+typically in the package `libgeos-dev` on Debian-like systems, `geos-devel` on
+RedHat-like systems, and `geos` in Homebrew.
+
 ## Features
 
 * Fluent Go API.
@@ -33,27 +43,23 @@ Package `go-geos` provides an interface to [GEOS](https://libgeos.org).
 
 * Optimized GeoJSON encoder.
 
-* Automatic finalization of GEOS objects.
+* Automatic cleanup of GEOS objects.
 
 ## Memory management
 
-`go-geos` objects live mostly on the C heap. `go-geos` sets finalizers on the
-objects it creates that free the associated C memory. However, the C heap is not
-visible to the Go runtime. The can result in significant memory pressure as
-memory is consumed by large, non-finalized geometries, of which the Go runtime
-is unaware. Consequently, if it is known that a geometry will no longer be used,
-it should be explicitly freed by calling its `Destroy()` method. Periodic calls
-to `runtime.GC()` can also help, but the Go runtime makes no guarantees about
-when or if finalizers will be called.
+`go-geos` objects live mostly on the C heap. `go-geos` sets cleanup functions on
+the objects it creates that free the associated C memory. However, the C heap is
+not visible to the Go runtime. The can result in significant memory pressure as
+memory is consumed by large, un-freed geometries, of which the Go runtime is
+unaware.
 
-You can set a function to be called whenever a geometry's finalizer is invoked
-with the `WithGeomFinalizeFunc` option to `NewContext()`. This can be helpful
-for tracking down geometry leaks.
+## Ownership
 
-For more information, see the [documentation for
-`runtime.SetFinalizer()`](https://pkg.go.dev/runtime#SetFinalizer) and [this
-thread on
-`golang-nuts`](https://groups.google.com/g/golang-nuts/c/XnV16PxXBfA/m/W8VEzIvHBAAJ).
+Returned sub-geometries (e.g. polygon rings or geometries in a collection) and
+coordinate sequences are owned by the geometry and will keep the geometry alive
+with a reference to it. Collections take ownership of all their geometries:
+directly if the geometry is unowned, or via cloning for an already-owned
+geometry.
 
 ## Errors, exceptions, and panics
 
@@ -84,6 +90,19 @@ memory management), or you require the battle-tested geometry functions provided
 by GEOS and are willing to handle memory management manually. `go-geom` is
 recommended for long-running processes with less stringent geometry function
 requirements.
+
+## GEOS version compatibility
+
+`go-geos` is tested to work with the versions of `GEOS` tested on CI.
+See [here](.github/workflows/main.yml).
+
+Calling functions unsupported by the underlying `GEOS` library will result in a panic.
+Users can use [`VersionCompare`](https://pkg.go.dev/github.com/twpayne/go-geos#VersionCompare)
+to be sure that a function exists.
+
+## Contributing
+
+Please check [`CONTRIBUTING.md`](./CONTRIBUTING.md) for instructions before you open a pull-request!
 
 ## License
 

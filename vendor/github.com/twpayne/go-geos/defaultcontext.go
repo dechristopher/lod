@@ -9,8 +9,8 @@ func Clone(g *Geom) *Geom {
 }
 
 // NewGeomFromBounds returns a new polygon populated with bounds.
-func NewGeomFromBounds(bounds *Bounds) *Geom {
-	return DefaultContext.NewGeomFromBounds(bounds)
+func NewGeomFromBounds(minX, minY, maxX, maxY float64) *Geom {
+	return DefaultContext.NewGeomFromBounds(minX, minY, maxX, maxY)
 }
 
 // NewCollection returns a new collection.
@@ -48,7 +48,7 @@ func NewEmptyPolygon() *Geom {
 	return DefaultContext.NewEmptyPolygon()
 }
 
-// NewGEOMFromGeoJSON parses a geometry in GeoJSON format from geoJSON.
+// NewGeomFromGeoJSON parses a geometry in GeoJSON format from GeoJSON.
 func NewGeomFromGeoJSON(geoJSON string) (*Geom, error) {
 	return DefaultContext.NewGeomFromGeoJSON(geoJSON)
 }
@@ -83,9 +83,14 @@ func NewPointFromXY(x, y float64) *Geom {
 	return DefaultContext.NewPointFromXY(x, y)
 }
 
-// NewPolygon returns a new point populated with coordss.
+// NewPolygon returns a new polygon populated with coordss.
 func NewPolygon(coordss [][][]float64) *Geom {
 	return DefaultContext.NewPolygon(coordss)
+}
+
+// NewSTRtree returns a new STRtree with the given number of entries per node.
+func NewSTRtree(nodeCapacity int) *STRtree {
+	return DefaultContext.NewSTRtree(nodeCapacity)
 }
 
 // Polygonize returns a set of geometries which contains linework that
